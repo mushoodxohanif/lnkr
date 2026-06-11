@@ -1,0 +1,17 @@
+{
+  "name": "@lnkr/sn-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "pg": "^8.21.0",
+    "dotenv": "^17.4.2",
+    "playwright": "^1.60.0"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "name": "lnkr",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome check --write --unsafe .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "bunx prisma generate",
+    "db:push": "bunx prisma db push",
+    "db:studio": "bunx prisma studio",
+    "sn:sync": "bun run packages/sn-scraper/src/cli.ts",
+    "sn:sync:apify": "bun run packages/sn-scraper/src/cli.ts --apify --all",
+    "enrich:leads": "bun run lib/enrichment/cli.ts",
+    "score:leads": "bun run lib/icp/cli.ts",
+    "generate:content": "bun run lib/agent/cli.ts",
+    "daily:rank": "bun run lib/agent/ranker-cli.ts",
+    "daily:rank:cron": "bun run lib/agent/ranker-cli.ts --cron",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.81",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "ai": "^6.0.202",
+    "next": "16.2.9",
+    "pg": "^8.21.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@tailwindcss/postcss": "^4",
+    "@types/bun": "^1.3.14",
+    "@types/node": "^20",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "sharp",
+    "unrs-resolver",
+    "prisma",
+    "@prisma/client"
+  ]
+}
