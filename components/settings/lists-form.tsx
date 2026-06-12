@@ -43,7 +43,7 @@ export function ListsForm({ lists }: ListsFormProps) {
     <div className="space-y-6">
       <FormSection
         title="Saved Sales Navigator lists"
-        description="Paste URLs from your SN lead lists. The scraper syncs enabled lists on schedule."
+        description="Paste a saved people list URL from Sales Navigator. Enable lists you want to sync."
       >
         {lists.length === 0 ? (
           <p className="text-sm text-zinc-500">
@@ -131,7 +131,7 @@ export function ListsForm({ lists }: ListsFormProps) {
           {editingList ? (
             <input type="hidden" name="id" value={editingList.id} />
           ) : null}
-          <Field label="List name">
+          <Field label="List name" hint="Label for your reference only.">
             <TextInput
               name="name"
               key={`name-${editingId ?? "new"}`}
@@ -140,7 +140,10 @@ export function ListsForm({ lists }: ListsFormProps) {
               required
             />
           </Field>
-          <Field label="Sales Navigator list URL">
+          <Field
+            label="Sales Navigator list URL"
+            hint="Open your list in Sales Navigator and copy the browser URL (must contain /sales/lists/people/)."
+          >
             <TextInput
               name="url"
               key={`url-${editingId ?? "new"}`}

@@ -41,8 +41,6 @@ export type SyncOptions = {
   loginOnly?: boolean;
   limit?: number;
   headed?: boolean;
-  useApify?: boolean;
-  fallbackApify?: boolean;
 };
 
 export type SyncResult = {

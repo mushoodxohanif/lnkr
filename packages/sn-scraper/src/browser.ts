@@ -38,11 +38,36 @@ export async function ensureLoggedIn(
   context: BrowserContext,
   loginTimeoutMs: number,
 ): Promise<boolean> {
-  const page = context.pages()[0] ?? (await context.newPage());
-  await page.goto("https://www.linkedin.com/feed/", {
-    waitUntil: "domcontentloaded",
-    timeout: 60_000,
-  });
+  for (const stale of context.pages()) {
+    await stale.close().catch(() => undefined);
+  }
+
+  const page = await context.newPage();
+
+  async function goto(url: string): Promise<void> {
+    try {
+      await page.goto(url, {
+        waitUntil: "domcontentloaded",
+        timeout: 60_000,
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message.includes("ERR_ABORTED") ||
+          error.message.includes("frame was detached"))
+      ) {
+        await page.goto(url, {
+          waitUntil: "domcontentloaded",
+          timeout: 60_000,
+        });
+        return;
+      }
+      throw error;
+    }
+  }
+
+  await goto("https://www.linkedin.com/feed/");
+  await page.waitForTimeout(2000);
 
   const { isLoggedIn, waitForManualLogin } = await import("./safety");
 
@@ -50,10 +75,7 @@ export async function ensureLoggedIn(
     return true;
   }
 
-  await page.goto("https://www.linkedin.com/login", {
-    waitUntil: "domcontentloaded",
-    timeout: 60_000,
-  });
+  await goto("https://www.linkedin.com/login");
 
   return waitForManualLogin(page, loginTimeoutMs);
 }

@@ -30,8 +30,11 @@ export const SELECTORS = {
     ".search-results-container",
     "table.artdeco-models-table",
     ".lists-detail__lead-list-results",
+    "table.lists-detail__table",
+    "table",
   ],
   listRow: [
+    "table tbody tr",
     "tr.artdeco-models-table-row",
     ".lead-list__result-row",
     "[data-x--lead-list-result-item]",
@@ -39,16 +42,17 @@ export const SELECTORS = {
     ".search-results__result-item",
   ],
   listRowNameLink: [
-    'a[data-control-name="view_lead_panel_via_search_lead_name"]',
     'a[href*="/sales/lead/"]',
+    'a[data-control-name="view_lead_panel_via_search_lead_name"]',
     'a[href*="/in/"]',
     ".artdeco-entity-lockup__title a",
     ".result-lockup__name a",
   ],
   listRowTitle: [
+    '[data-anonymize="title"]',
     ".artdeco-entity-lockup__subtitle",
     ".result-lockup__highlight-keyword",
-    '[data-anonymize="title"]',
+    ".horizontal-person-entity-lockup-4 .artdeco-entity-lockup__subtitle",
   ],
   listRowCompany: [
     '[data-anonymize="company-name"]',

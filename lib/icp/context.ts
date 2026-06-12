@@ -6,6 +6,7 @@ import type {
   CompanySignals,
   CompanyTechStack,
 } from "@/lib/enrichment/types";
+import { getEffectiveICP } from "@/lib/icp/effective-icp";
 import type {
   ParsedCompanyEnrichment,
   ScoringContext,
@@ -167,7 +168,7 @@ export function buildScoringContextFromRecords(
   return {
     lead,
     enrichment: parseCompanyEnrichment(lead.companyEnrichment, lead),
-    icp,
+    icp: getEffectiveICP(icp, product),
     product,
     recentPosts: parseRecentPosts(lead.recentPosts),
   };

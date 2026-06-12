@@ -16,7 +16,6 @@
     "db:push": "bunx prisma db push",
     "db:studio": "bunx prisma studio",
     "sn:sync": "bun run packages/sn-scraper/src/cli.ts",
-    "sn:sync:apify": "bun run packages/sn-scraper/src/cli.ts --apify --all",
     "enrich:leads": "bun run lib/enrichment/cli.ts",
     "score:leads": "bun run lib/icp/cli.ts",
     "generate:content": "bun run lib/agent/cli.ts",
@@ -33,6 +32,8 @@
     "pg": "^8.21.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

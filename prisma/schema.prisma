@@ -30,7 +30,7 @@ model ICPCriteria {
   geo             Json     @default("[]")
   exclusionRules  Json     @default("{}")
   weights         Json     @default("{}")
-  fitThreshold    Int      @default(60)
+  fitThreshold    Int      @default(45)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

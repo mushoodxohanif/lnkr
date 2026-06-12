@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
+  { href: "/help", label: "Setup guide" },
   { href: "/settings/product", label: "Product profile" },
   { href: "/settings/icp", label: "ICP criteria" },
   { href: "/settings/lists", label: "SN list URLs" },

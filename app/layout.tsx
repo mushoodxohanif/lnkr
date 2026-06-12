@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+/** Allow longer server actions on Vercel Pro; Hobby still caps at 10s. */
+export const maxDuration = 60;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

@@ -204,7 +204,10 @@ export function createDataLayerProvider(apiKey: string): EnrichmentProvider {
     ): Promise<EnrichedCompanyData | null> {
       const body: Record<string, unknown> = {};
       if (input.domain) body.domain = normalizeDomain(input.domain);
-      if (input.companyName) body.company_name = input.companyName;
+      if (input.companyName) {
+        body.name = input.companyName;
+        body.company_name = input.companyName;
+      }
       if (input.linkedInUrl) body.linkedin_url = input.linkedInUrl;
 
       if (Object.keys(body).length === 0) return null;

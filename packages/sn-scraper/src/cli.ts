@@ -5,6 +5,7 @@ import { runLoginFlow, runSync } from "./sync";
 import { parseCliArgs } from "./utils";
 
 const packageRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
+loadEnv({ path: resolve(packageRoot, "../../.env.local") });
 loadEnv({ path: resolve(packageRoot, "../../.env") });
 
 function printHelp(): void {
@@ -23,8 +24,6 @@ Options:
   --limit <n>        Override daily scrape limit for this run
   --headed           Run with visible browser (default)
   --headless         Run without visible browser
-  --apify            Sync via Apify instead of local Playwright
-  --fallback-apify   Fall back to Apify when Playwright finds no list rows
   --help, -h         Show this help
 
 Environment:
@@ -32,12 +31,6 @@ Environment:
   DAILY_SCRAPE_LIMIT    Max profiles per day (default: 50)
   SCRAPE_MIN_DELAY_MS   Min delay between profiles (default: 4000)
   SCRAPE_MAX_DELAY_MS   Max delay between profiles (default: 10000)
-  APIFY_TOKEN           Apify token for --apify / --fallback-apify
-  APIFY_ACTOR_ID        Your Crawlee actor ID (e.g. username/lnkr-sn-scraper)
-  APIFY_FALLBACK        Set to "true" to enable Apify fallback without --fallback-apify
-  APIFY_LI_AT           Optional li_at cookie for your actor's Playwright session
-  APIFY_INPUT_JSON      Optional JSON object merged into actor input (proxy, etc.)
-  APIFY_HEADLESS        Set to "true" to run headless on Apify (default: headed Chrome)
   DATABASE_URL          PostgreSQL connection string (required for --all)
 
 Safety:
@@ -76,30 +69,14 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(
-    args.useApify
-      ? "Starting Apify SN list sync..."
-      : "Starting SN list sync...",
-  );
+  console.log("Starting SN list sync...");
 
-  const result = args.useApify
-    ? await (async () => {
-        const { runApifySync } = await import(
-          "../../../lib/integrations/apify-sync"
-        );
-        return runApifySync({
-          listUrl: args.listUrl,
-          syncAll: args.syncAll,
-          limit: args.limit,
-        });
-      })()
-    : await runSync({
-        listUrl: args.listUrl,
-        syncAll: args.syncAll,
-        limit: args.limit,
-        headed: args.headed,
-        fallbackApify: args.fallbackApify,
-      });
+  const result = await runSync({
+    listUrl: args.listUrl,
+    syncAll: args.syncAll,
+    limit: args.limit,
+    headed: args.headed,
+  });
 
   console.log("\n--- Sync complete ---");
   console.log(`Scraped:  ${result.scraped}`);
@@ -115,7 +92,8 @@ async function main(): Promise<void> {
   const exitCode =
     result.stoppedReason === "captcha" ||
     result.stoppedReason === "rate_limit" ||
-    result.stoppedReason === "login_timeout"
+    result.stoppedReason === "login_timeout" ||
+    result.scraped === 0
       ? 1
       : 0;
 

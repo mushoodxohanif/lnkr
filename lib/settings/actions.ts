@@ -6,6 +6,8 @@ import { getRecentActivityLogs } from "@/lib/activity/queries";
 import { db } from "@/lib/db";
 import { PROMPT_TEMPLATE_KEYS, savePromptTemplate } from "@/lib/prompts/store";
 import { getSafetyConfig, getTodayScrapeCount } from "@/lib/safety/config";
+import { DEFAULT_FIT_THRESHOLD } from "@/lib/settings/defaults";
+import { normalizeTagList } from "@/lib/settings/normalize-tags";
 import {
   type DoNotContactEntry,
   type ICPCriteriaData,
@@ -64,14 +66,18 @@ export async function saveUserProfile(
   formData: FormData,
 ): Promise<ActionState> {
   const productName = String(formData.get("productName") ?? "").trim();
-  const valueProps = parseStringArray(
-    JSON.parse(String(formData.get("valueProps") ?? "[]")),
+  const valueProps = normalizeTagList(
+    parseStringArray(JSON.parse(String(formData.get("valueProps") ?? "[]"))),
   );
-  const targetIndustries = parseStringArray(
-    JSON.parse(String(formData.get("targetIndustries") ?? "[]")),
+  const targetIndustries = normalizeTagList(
+    parseStringArray(
+      JSON.parse(String(formData.get("targetIndustries") ?? "[]")),
+    ),
   );
-  const targetPersonas = parseStringArray(
-    JSON.parse(String(formData.get("targetPersonas") ?? "[]")),
+  const targetPersonas = normalizeTagList(
+    parseStringArray(
+      JSON.parse(String(formData.get("targetPersonas") ?? "[]")),
+    ),
   );
   const caseStudies = parseCaseStudies(
     JSON.parse(String(formData.get("caseStudies") ?? "[]")),
@@ -138,38 +144,46 @@ export async function saveICPCriteria(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const titles = parseStringArray(
-    JSON.parse(String(formData.get("titles") ?? "[]")),
+  const titles = normalizeTagList(
+    parseStringArray(JSON.parse(String(formData.get("titles") ?? "[]"))),
   );
-  const seniorityLevels = parseStringArray(
-    JSON.parse(String(formData.get("seniorityLevels") ?? "[]")),
+  const seniorityLevels = normalizeTagList(
+    parseStringArray(
+      JSON.parse(String(formData.get("seniorityLevels") ?? "[]")),
+    ),
   );
-  const industries = parseStringArray(
-    JSON.parse(String(formData.get("industries") ?? "[]")),
+  const industries = normalizeTagList(
+    parseStringArray(JSON.parse(String(formData.get("industries") ?? "[]"))),
   );
-  const techStack = parseStringArray(
-    JSON.parse(String(formData.get("techStack") ?? "[]")),
+  const techStack = normalizeTagList(
+    parseStringArray(JSON.parse(String(formData.get("techStack") ?? "[]"))),
   );
-  const geo = parseStringArray(JSON.parse(String(formData.get("geo") ?? "[]")));
-  const exclusionRules = parseExclusionRules(
+  const geo = normalizeTagList(
+    parseStringArray(JSON.parse(String(formData.get("geo") ?? "[]"))),
+  );
+  const exclusionRulesRaw = parseExclusionRules(
     JSON.parse(String(formData.get("exclusionRules") ?? "{}")),
   );
+  const exclusionRules = {
+    ...exclusionRulesRaw,
+    competitors: normalizeTagList(exclusionRulesRaw.competitors ?? []),
+    titles: normalizeTagList(exclusionRulesRaw.titles ?? []),
+    industries: normalizeTagList(exclusionRulesRaw.industries ?? []),
+  };
   const weights = parseWeights(
     JSON.parse(String(formData.get("weights") ?? "{}")),
   );
 
   const companySizeMinRaw = String(formData.get("companySizeMin") ?? "").trim();
   const companySizeMaxRaw = String(formData.get("companySizeMax") ?? "").trim();
-  const fitThresholdRaw = String(formData.get("fitThreshold") ?? "60").trim();
+  const fitThresholdRaw = String(
+    formData.get("fitThreshold") ?? String(DEFAULT_FIT_THRESHOLD),
+  ).trim();
   const id = String(formData.get("id") ?? "").trim() || undefined;
 
   const companySizeMin = companySizeMinRaw ? Number(companySizeMinRaw) : null;
   const companySizeMax = companySizeMaxRaw ? Number(companySizeMaxRaw) : null;
   const fitThreshold = Number(fitThresholdRaw);
-
-  if (titles.length === 0) {
-    return { success: false, message: "Add at least one target title." };
-  }
 
   if (
     companySizeMin !== null &&
@@ -347,9 +361,6 @@ export async function getSafetyStatus(): Promise<SafetyStatusData> {
     maxPostsPerProfile: config.maxPostsPerProfile,
     browserProfileDir: config.browserProfileDir,
     browserProfileExists: config.browserProfileExists,
-    apifyConfigured: config.apifyConfigured,
-    apifyActorId: config.apifyActorId,
-    apifyFallbackEnabled: config.apifyFallbackEnabled,
     todayScrapeCount,
     remainingToday: Math.max(0, config.dailyScrapeLimit - todayScrapeCount),
   };

@@ -50,8 +50,15 @@ export default async function HomePage() {
             No daily batch yet
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
-            Sync leads from Sales Navigator, enrich and score them, then build
-            today&apos;s top 50 with AI drafts.
+            Sync leads from your computer, then enrich, score, and build
+            today&apos;s batch from this dashboard. New here?{" "}
+            <a
+              href="/help"
+              className="font-medium text-violet-700 hover:underline"
+            >
+              Read the setup guide
+            </a>
+            .
           </p>
           <div className="mx-auto mt-8 max-w-xl text-left">
             <PipelineActions config={pipelineConfig} />

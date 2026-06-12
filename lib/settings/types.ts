@@ -66,9 +66,6 @@ export type SafetyStatusData = {
   maxPostsPerProfile: number;
   browserProfileDir: string;
   browserProfileExists: boolean;
-  apifyConfigured: boolean;
-  apifyActorId: string;
-  apifyFallbackEnabled: boolean;
   todayScrapeCount: number;
   remainingToday: number;
 };

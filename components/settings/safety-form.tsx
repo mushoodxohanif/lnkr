@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { LocalSyncGuide } from "@/components/dashboard/local-sync-guide";
 import { PipelineActions } from "@/components/dashboard/pipeline-actions";
 import {
   Field,
@@ -71,7 +72,7 @@ export function SafetyForm({
     <div className="space-y-6">
       <FormSection
         title="Scraper safety limits"
-        description="Limits are read from environment variables. Update .env and restart sync jobs to change them."
+        description="Read-only limits for local Playwright sync. Change via Vercel env vars or `.env.local` when syncing from your computer."
       >
         <dl className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
@@ -104,57 +105,66 @@ export function SafetyForm({
               {safety.maxPostsPerProfile}
             </dd>
           </div>
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Apify fallback
-            </dt>
-            <dd className="mt-1 text-lg font-semibold text-zinc-900">
-              {safety.apifyConfigured ? "Configured" : "Not configured"}
-            </dd>
-            <p className="mt-1 text-xs text-zinc-500">
-              {safety.apifyFallbackEnabled
-                ? "APIFY_FALLBACK enabled"
-                : "Use --fallback-apify or APIFY_FALLBACK=true"}
-            </p>
-          </div>
         </dl>
       </FormSection>
 
       <FormSection
         title="Browser session"
-        description="Playwright stores your LinkedIn session in a persistent Chrome profile. Sign in once below for local sync."
+        description={
+          pipelineConfig.playwrightAvailable
+            ? "Playwright stores your LinkedIn session in a persistent Chrome profile on this machine."
+            : "On Vercel, LinkedIn login and sync run on your computer — not in the cloud. Use the commands below with the same DATABASE_URL as production."
+        }
       >
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-          <p className="text-sm font-medium text-zinc-900">Profile directory</p>
-          <p className="mt-1 font-mono text-xs text-zinc-600">
-            {safety.browserProfileDir}
-          </p>
-          <p className="mt-2 text-sm text-zinc-600">
-            Status:{" "}
-            <span
-              className={
+        {!pipelineConfig.playwrightAvailable ? <LocalSyncGuide /> : null}
+        <dl className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              Sync method
+            </dt>
+            <dd className="mt-1 text-lg font-semibold text-zinc-900">
+              Playwright (local machine)
+            </dd>
+            <p className="mt-1 text-xs text-zinc-500">
+              {pipelineConfig.playwrightAvailable
+                ? "Sync uses your local browser. Sign in below before your first sync."
+                : "Configure lists here on Vercel; run sync from your laptop."}
+            </p>
+          </div>
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              LinkedIn session
+            </dt>
+            <dd
+              className={`mt-1 text-lg font-semibold ${
+                pipelineConfig.playwrightAvailable &&
                 safety.browserProfileExists
-                  ? "font-medium text-emerald-700"
-                  : "font-medium text-amber-700"
-              }
+                  ? "text-emerald-700"
+                  : "text-amber-700"
+              }`}
             >
-              {safety.browserProfileExists
-                ? "Profile found — session may be saved"
-                : "No profile yet — sign in below"}
-            </span>
-          </p>
-        </div>
+              {pipelineConfig.playwrightAvailable && safety.browserProfileExists
+                ? "Profile saved locally"
+                : "Sign-in on your computer"}
+            </dd>
+            <p className="mt-1 text-xs text-zinc-500">
+              {pipelineConfig.playwrightAvailable && safety.browserProfileExists
+                ? "Session is on this machine — ready to sync."
+                : "Run `bun sn:sync --login` locally after `vercel env pull`."}
+            </p>
+          </div>
+        </dl>
+        {pipelineConfig.playwrightAvailable ? (
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+            <p className="text-sm font-medium text-zinc-900">
+              Profile directory
+            </p>
+            <p className="mt-1 font-mono text-xs text-zinc-600">
+              {safety.browserProfileDir}
+            </p>
+          </div>
+        ) : null}
         <PipelineActions config={pipelineConfig} variant="login-only" />
-        <p className="text-sm text-zinc-600">
-          Apify actor:{" "}
-          {safety.apifyActorId ? (
-            <span className="font-mono text-xs">{safety.apifyActorId}</span>
-          ) : (
-            <span className="text-amber-700">
-              Set APIFY_ACTOR_ID to your Crawlee actor
-            </span>
-          )}
-        </p>
       </FormSection>
 
       <FormSection

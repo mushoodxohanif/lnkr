@@ -20,7 +20,7 @@ export default async function SafetySettingsPage() {
   return (
     <SettingsShell
       title="Safety & audit"
-      description="Scraper guardrails, do-not-contact list, and an audit trail of agent actions. Draft-only — nothing is sent automatically."
+      description="Scraper limits apply to local sync. Blocklist and audit log are shared via your Neon database."
     >
       <SafetyForm
         safety={safety}

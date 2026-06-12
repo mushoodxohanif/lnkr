@@ -10,7 +10,7 @@ export default async function ProductSettingsPage() {
   return (
     <SettingsShell
       title="Product profile"
-      description="Tell the agent about your SaaS so it can score leads and draft personalized outreach."
+      description="Tell the agent what you sell — product name and value props are required. Industries and personas auto-feed ICP scoring."
     >
       <ProductForm initialData={profile} />
     </SettingsShell>

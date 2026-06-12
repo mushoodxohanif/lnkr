@@ -10,7 +10,7 @@ export default async function PromptsSettingsPage() {
   return (
     <SettingsShell
       title="Prompt templates"
-      description="Add custom instructions appended to Gemini prompts for scoring and outreach copy."
+      description="Optional tone and focus rules appended to Gemini. Pre-filled examples match your fitness/gym setup."
     >
       <PromptsForm templates={templates} />
     </SettingsShell>

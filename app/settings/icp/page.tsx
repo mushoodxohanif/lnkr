@@ -10,7 +10,7 @@ export default async function ICPSettingsPage() {
   return (
     <SettingsShell
       title="ICP criteria"
-      description="Define your ideal customer profile. The scorer uses these rules plus AI evaluation to rank leads."
+      description="Define who makes it into today's batch. Start with target titles and fit threshold — see the setup guide for details."
     >
       <ICPForm initialData={criteria} />
     </SettingsShell>

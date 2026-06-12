@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { LocalSyncGuide } from "@/components/dashboard/local-sync-guide";
 import {
   buildDailyBatch,
   enrichPendingLeads,
@@ -11,12 +12,26 @@ import {
   syncEnabledLists,
 } from "@/lib/pipeline/actions";
 import type { PipelineConfig } from "@/lib/pipeline/status";
+import { LOCAL_SYNC_COMMANDS } from "@/lib/runtime/deployment";
 
 type PipelineActionsProps = {
   config: PipelineConfig;
   variant?: "full" | "compact" | "sync-only" | "login-only";
   showRunAll?: boolean;
 };
+
+function SyncProviderHint({ config }: { config: PipelineConfig }) {
+  if (!config.playwrightAvailable) return null;
+  if (config.browserProfileExists) return null;
+
+  return (
+    <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+      No LinkedIn session saved yet. Run{" "}
+      <code className="font-mono text-xs">{LOCAL_SYNC_COMMANDS.login}</code> on
+      your computer, or use Settings → Safety when running locally.
+    </p>
+  );
+}
 
 type PipelineStep = {
   id: string;
@@ -25,6 +40,7 @@ type PipelineStep = {
   action: () => Promise<PipelineActionState>;
   disabled?: boolean;
   disabledReason?: string;
+  hidden?: boolean;
 };
 
 function ActionButton({
@@ -79,6 +95,10 @@ export function PipelineActions({
   const [pending, startTransition] = useTransition();
   const [activeStep, setActiveStep] = useState<string | null>(null);
   const [status, setStatus] = useState<PipelineActionState | null>(null);
+  const isVercel = config.deploymentPlatform === "vercel";
+  const envHint = isVercel
+    ? "Set this in Vercel → Project → Settings → Environment Variables."
+    : "Set this in .env or pull from Vercel with `vercel env pull`.";
 
   function runStep(stepId: string, action: () => Promise<PipelineActionState>) {
     startTransition(async () => {
@@ -90,18 +110,23 @@ export function PipelineActions({
     });
   }
 
-  const syncDisabled = config.enabledListCount === 0;
-  const syncDisabledReason = syncDisabled
-    ? "Add and enable at least one Sales Navigator list in Settings."
-    : undefined;
+  const syncDisabled =
+    !config.playwrightAvailable || config.enabledListCount === 0;
+  const syncDisabledReason = !config.playwrightAvailable
+    ? `Run locally: ${LOCAL_SYNC_COMMANDS.sync}`
+    : config.enabledListCount === 0
+      ? "Add and enable at least one Sales Navigator list in Settings."
+      : undefined;
+
+  const syncDescription = config.playwrightAvailable
+    ? "Pull leads from enabled Sales Navigator lists using Playwright on this machine."
+    : "Runs on your computer with the same DATABASE_URL as this deployment.";
 
   const steps: PipelineStep[] = [
     {
       id: "sync",
       label: "Sync lists",
-      description: config.apifyConfigured
-        ? "Pull leads from enabled Sales Navigator lists via Apify."
-        : "Pull leads from enabled lists using your local Playwright session.",
+      description: syncDescription,
       action: syncEnabledLists,
       disabled: syncDisabled,
       disabledReason: syncDisabledReason,
@@ -109,18 +134,22 @@ export function PipelineActions({
     {
       id: "enrich",
       label: "Enrich leads",
-      description: "Fetch company data for unscored leads.",
+      description: isVercel
+        ? `Fetch company data (up to ${config.batchLimit} leads per run on Vercel).`
+        : "Fetch company data for unscored leads.",
       action: enrichPendingLeads,
       disabled: !config.enrichmentConfigured,
-      disabledReason: "Set ENRICHMENT_API_KEY in .env first.",
+      disabledReason: `Set ENRICHMENT_API_KEY first. ${envHint}`,
     },
     {
       id: "score",
       label: "Score leads",
-      description: "Run ICP fit scoring on enriched leads.",
+      description: isVercel
+        ? `Run ICP fit scoring (up to ${config.batchLimit} leads per run on Vercel).`
+        : "Run ICP fit scoring on enriched leads.",
       action: scorePendingLeads,
       disabled: !config.scoringConfigured,
-      disabledReason: "Set GOOGLE_GENERATIVE_AI_API_KEY in .env first.",
+      disabledReason: `Set GOOGLE_GENERATIVE_AI_API_KEY first. ${envHint}`,
     },
     {
       id: "rank",
@@ -129,20 +158,24 @@ export function PipelineActions({
         "Rank the top 50 and generate warming comments and connection notes.",
       action: () => buildDailyBatch(false),
       disabled: !config.contentConfigured,
-      disabledReason: "Set GOOGLE_GENERATIVE_AI_API_KEY in .env first.",
+      disabledReason: `Set GOOGLE_GENERATIVE_AI_API_KEY first. ${envHint}`,
     },
   ];
 
   if (variant === "login-only") {
     return (
       <div className="space-y-3">
-        <ActionButton
-          label="Open LinkedIn login"
-          description="Opens a browser window so you can sign in once. Your session is saved locally for Playwright sync."
-          pending={pending}
-          primary
-          onClick={() => runStep("login", startLinkedInLogin)}
-        />
+        {!config.playwrightAvailable ? (
+          <LocalSyncGuide />
+        ) : (
+          <ActionButton
+            label="Open LinkedIn login"
+            description="Opens a browser window so you can sign in once. Your session is saved locally for Playwright sync."
+            pending={pending}
+            primary
+            onClick={() => runStep("login", startLinkedInLogin)}
+          />
+        )}
         {status ? (
           <p
             className={`rounded-lg px-3 py-2 text-sm ${
@@ -163,15 +196,19 @@ export function PipelineActions({
     const syncStep = steps[0];
     return (
       <div className="space-y-3">
-        <ActionButton
-          label="Sync enabled lists"
-          description={syncStep.description}
-          pending={pending}
-          disabled={syncStep.disabled}
-          disabledReason={syncStep.disabledReason}
-          primary
-          onClick={() => runStep("sync", syncStep.action)}
-        />
+        <LocalSyncGuide compact={isVercel} />
+        <SyncProviderHint config={config} />
+        {config.playwrightAvailable ? (
+          <ActionButton
+            label="Sync enabled lists"
+            description={syncStep.description}
+            pending={pending}
+            disabled={syncStep.disabled}
+            disabledReason={syncStep.disabledReason}
+            primary
+            onClick={() => runStep("sync", syncStep.action)}
+          />
+        ) : null}
         {status ? (
           <p
             className={`rounded-lg px-3 py-2 text-sm ${
@@ -189,9 +226,20 @@ export function PipelineActions({
   }
 
   const visibleSteps = variant === "compact" ? steps.slice(2) : steps;
+  const runAllDisabled =
+    pending ||
+    !config.enrichmentConfigured ||
+    !config.scoringConfigured ||
+    !config.contentConfigured ||
+    (config.playwrightAvailable && syncDisabled);
 
   return (
     <div className="space-y-4">
+      {variant === "full" && isVercel ? (
+        <LocalSyncGuide />
+      ) : variant === "full" ? (
+        <SyncProviderHint config={config} />
+      ) : null}
       <div className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white">
         {visibleSteps.map((step) => (
           <div key={step.id} className="p-4">
@@ -212,27 +260,25 @@ export function PipelineActions({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-zinc-900">
-              Run full pipeline
+              {isVercel ? "Run cloud pipeline" : "Run full pipeline"}
             </p>
             <p className="mt-0.5 text-sm text-zinc-600">
-              Sync, enrich, score, and build today&apos;s batch in one go.
+              {isVercel
+                ? "Enrich, score, and build today's batch on Vercel."
+                : "Sync, enrich, score, and build today's batch in one go."}
             </p>
           </div>
           <button
             type="button"
-            disabled={
-              pending ||
-              syncDisabled ||
-              !config.enrichmentConfigured ||
-              !config.scoringConfigured ||
-              !config.contentConfigured
-            }
+            disabled={runAllDisabled}
             onClick={() => runStep("all", runFullPipeline)}
             className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending && activeStep === "all"
               ? "Running pipeline..."
-              : "Run all"}
+              : isVercel
+                ? "Run cloud pipeline"
+                : "Run all"}
           </button>
         </div>
       ) : null}

@@ -58,6 +58,24 @@ export async function detectCaptchaOrRateLimit(page: Page): Promise<void> {
 }
 
 export async function isLoggedIn(page: Page): Promise<boolean> {
+  const url = page.url();
+  if (
+    (url.includes("linkedin.com/feed") ||
+      url.includes("linkedin.com/sales/") ||
+      url.includes("linkedin.com/mynetwork") ||
+      url.includes("linkedin.com/notifications")) &&
+    !url.includes("/login") &&
+    !url.includes("/checkpoint") &&
+    !url.includes("/authwall")
+  ) {
+    return true;
+  }
+
+  const cookies = await page.context().cookies("https://www.linkedin.com");
+  if (cookies.some((cookie) => cookie.name === "li_at" && cookie.value)) {
+    return true;
+  }
+
   for (const selector of SELECTORS.loggedInIndicators) {
     const el = page.locator(selector).first();
     if ((await el.count()) > 0) {

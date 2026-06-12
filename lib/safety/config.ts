@@ -26,11 +26,6 @@ export function getSafetyConfig() {
     maxPostsPerProfile: parsePositiveInt(process.env.MAX_POSTS_PER_PROFILE, 5),
     browserProfileDir,
     browserProfileExists: existsSync(browserProfileDir),
-    apifyConfigured:
-      Boolean(process.env.APIFY_TOKEN?.trim()) &&
-      Boolean(process.env.APIFY_ACTOR_ID?.trim()),
-    apifyActorId: process.env.APIFY_ACTOR_ID?.trim() ?? "",
-    apifyFallbackEnabled: process.env.APIFY_FALLBACK === "true",
   };
 }
 

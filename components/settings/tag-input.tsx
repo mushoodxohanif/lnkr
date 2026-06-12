@@ -20,15 +20,38 @@ export function TagInput({
 }: TagInputProps) {
   const [draft, setDraft] = useState("");
 
-  function addValue(raw: string) {
-    const next = raw.trim();
-    if (!next) return;
-    if (values.some((value) => value.toLowerCase() === next.toLowerCase())) {
-      setDraft("");
-      return;
+  function addValues(rawSegments: string[]) {
+    const nextValues = [...values];
+    let changed = false;
+
+    for (const raw of rawSegments) {
+      const next = raw.trim();
+      if (!next) continue;
+      if (
+        nextValues.some((value) => value.toLowerCase() === next.toLowerCase())
+      ) {
+        continue;
+      }
+      nextValues.push(next);
+      changed = true;
     }
-    onChange([...values, next]);
+
+    if (changed) {
+      onChange(nextValues);
+    }
     setDraft("");
+  }
+
+  function addValue(raw: string) {
+    addValues([raw]);
+  }
+
+  function handlePaste(event: React.ClipboardEvent<HTMLInputElement>) {
+    const text = event.clipboardData.getData("text");
+    if (!/[,\n]/.test(text)) return;
+
+    event.preventDefault();
+    addValues(text.split(/[,\n]+/));
   }
 
   function removeValue(index: number) {
@@ -66,6 +89,7 @@ export function TagInput({
             addValue(draft);
           }
         }}
+        onPaste={handlePaste}
         onBlur={() => addValue(draft)}
       />
       {hint ? (

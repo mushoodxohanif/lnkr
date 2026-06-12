@@ -5,8 +5,13 @@ import { isContentGenerationConfigured } from "@/lib/agent/config";
 import { runDailyRanker } from "@/lib/agent/daily-ranker";
 import { enrichLeadsBatch, isEnrichmentConfigured } from "@/lib/enrichment";
 import { isScoringConfigured, scoreLeadsBatch } from "@/lib/icp";
-import { ApifyError, isApifyConfigured } from "@/lib/integrations/apify-sn";
-import { runApifySync } from "@/lib/integrations/apify-sync";
+import {
+  canRunPlaywrightSync,
+  envConfigHint,
+  getPipelineBatchLimit,
+  isVercelDeployment,
+  LOCAL_SYNC_COMMANDS,
+} from "@/lib/runtime/deployment";
 import type { SyncResult } from "../../packages/sn-scraper/src/types";
 
 export type PipelineActionState = {
@@ -25,15 +30,12 @@ function revalidatePipelinePaths() {
   revalidatePath("/settings/safety");
 }
 
-function formatSyncResult(
-  result: SyncResult,
-  provider: "Apify" | "Playwright",
-): PipelineActionState {
+function formatSyncResult(result: SyncResult): PipelineActionState {
   revalidatePipelinePaths();
 
   if (result.stoppedReason === "daily_limit" && result.scraped === 0) {
     return emptyState(
-      "Daily scrape limit reached. Try again tomorrow or raise DAILY_SCRAPE_LIMIT in .env.",
+      "Daily scrape limit reached. Try again tomorrow or raise DAILY_SCRAPE_LIMIT in environment variables.",
     );
   }
 
@@ -43,8 +45,14 @@ function formatSyncResult(
     );
   }
 
+  if (result.scraped === 0) {
+    return emptyState(
+      "No leads saved. Sign in via Settings → Safety, then sync again.",
+    );
+  }
+
   const parts = [
-    `${provider} sync finished`,
+    "Playwright sync finished",
     `${result.scraped} saved`,
     result.skipped > 0 ? `${result.skipped} skipped` : null,
     result.errors > 0 ? `${result.errors} errors` : null,
@@ -52,26 +60,23 @@ function formatSyncResult(
   ].filter(Boolean);
 
   return {
-    success: result.errors === 0 || result.scraped > 0,
+    success: result.errors === 0,
     message: parts.join(" · "),
   };
 }
 
 export async function syncEnabledLists(): Promise<PipelineActionState> {
-  try {
-    if (isApifyConfigured()) {
-      const result = await runApifySync({ syncAll: true });
-      return formatSyncResult(result, "Apify");
-    }
+  if (!canRunPlaywrightSync()) {
+    return emptyState(
+      `Sync cannot run on Vercel. On your computer: ${LOCAL_SYNC_COMMANDS.envPull} then ${LOCAL_SYNC_COMMANDS.sync}`,
+    );
+  }
 
+  try {
     const { runSync } = await import("../../packages/sn-scraper/src/sync");
     const result = await runSync({ syncAll: true, headed: true });
-    return formatSyncResult(result, "Playwright");
+    return formatSyncResult(result);
   } catch (error) {
-    if (error instanceof ApifyError) {
-      return emptyState(error.message);
-    }
-
     const message =
       error instanceof Error ? error.message : "Sync failed unexpectedly.";
 
@@ -87,15 +92,13 @@ export async function syncEnabledLists(): Promise<PipelineActionState> {
 
 export async function enrichPendingLeads(): Promise<PipelineActionState> {
   if (!isEnrichmentConfigured()) {
-    return emptyState(
-      "ENRICHMENT_API_KEY is not set. Add it to .env to enrich company data.",
-    );
+    return emptyState(`ENRICHMENT_API_KEY is not set. ${envConfigHint()}`);
   }
 
   try {
     const result = await enrichLeadsBatch({
       onlyUnenriched: true,
-      limit: 50,
+      limit: getPipelineBatchLimit(),
     });
 
     revalidatePipelinePaths();
@@ -116,14 +119,14 @@ export async function enrichPendingLeads(): Promise<PipelineActionState> {
 export async function scorePendingLeads(): Promise<PipelineActionState> {
   if (!isScoringConfigured()) {
     return emptyState(
-      "GOOGLE_GENERATIVE_AI_API_KEY is not set. Add it to .env to score leads.",
+      `GOOGLE_GENERATIVE_AI_API_KEY is not set. ${envConfigHint()}`,
     );
   }
 
   try {
     const result = await scoreLeadsBatch({
       onlyUnscored: true,
-      limit: 50,
+      limit: getPipelineBatchLimit(),
     });
 
     revalidatePipelinePaths();
@@ -144,7 +147,7 @@ export async function buildDailyBatch(
 ): Promise<PipelineActionState> {
   if (!isContentGenerationConfigured()) {
     return emptyState(
-      "GOOGLE_GENERATIVE_AI_API_KEY is not set. Add it to .env to generate drafts.",
+      `GOOGLE_GENERATIVE_AI_API_KEY is not set. ${envConfigHint()}`,
     );
   }
 
@@ -194,7 +197,36 @@ export async function buildDailyBatch(
   }
 }
 
+export async function runCloudPipeline(): Promise<PipelineActionState> {
+  const enrichResult = await enrichPendingLeads();
+  if (!enrichResult.success) {
+    return enrichResult;
+  }
+
+  const scoreResult = await scorePendingLeads();
+  if (!scoreResult.success) {
+    return scoreResult;
+  }
+
+  const rankResult = await buildDailyBatch(false);
+  if (!rankResult.success && rankResult.message.includes("already exists")) {
+    return {
+      success: true,
+      message: `Cloud pipeline finished. ${enrichResult.message} ${scoreResult.message} Today's batch was already built.`,
+    };
+  }
+
+  return {
+    success: rankResult.success,
+    message: `${enrichResult.message} ${scoreResult.message} ${rankResult.message}`,
+  };
+}
+
 export async function runFullPipeline(): Promise<PipelineActionState> {
+  if (isVercelDeployment()) {
+    return runCloudPipeline();
+  }
+
   const syncResult = await syncEnabledLists();
   if (
     !syncResult.success &&
@@ -228,6 +260,12 @@ export async function runFullPipeline(): Promise<PipelineActionState> {
 }
 
 export async function startLinkedInLogin(): Promise<PipelineActionState> {
+  if (!canRunPlaywrightSync()) {
+    return emptyState(
+      `LinkedIn login must run on your computer: ${LOCAL_SYNC_COMMANDS.envPull} then ${LOCAL_SYNC_COMMANDS.login}`,
+    );
+  }
+
   try {
     const { runLoginFlow } = await import("../../packages/sn-scraper/src/sync");
     const loggedIn = await runLoginFlow(true);

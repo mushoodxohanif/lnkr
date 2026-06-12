@@ -56,8 +56,6 @@ export function parseCliArgs(argv: string[]): {
   loginOnly: boolean;
   limit?: number;
   headed?: boolean;
-  useApify: boolean;
-  fallbackApify: boolean;
   help: boolean;
 } {
   const result = {
@@ -66,8 +64,6 @@ export function parseCliArgs(argv: string[]): {
     loginOnly: false,
     limit: undefined as number | undefined,
     headed: undefined as boolean | undefined,
-    useApify: false,
-    fallbackApify: false,
     help: false,
   };
 
@@ -109,16 +105,6 @@ export function parseCliArgs(argv: string[]): {
 
     if (arg === "--headless") {
       result.headed = false;
-      continue;
-    }
-
-    if (arg === "--apify") {
-      result.useApify = true;
-      continue;
-    }
-
-    if (arg === "--fallback-apify") {
-      result.fallbackApify = true;
     }
   }
 

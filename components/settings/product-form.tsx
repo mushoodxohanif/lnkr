@@ -52,9 +52,21 @@ export function ProductForm({ initialData }: ProductFormProps) {
     <form action={formAction} className="space-y-6">
       {data.id ? <input type="hidden" name="id" value={data.id} /> : null}
 
+      <div className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-900">
+        <p className="font-medium">Minimum setup</p>
+        <p className="mt-1 text-violet-800/90">
+          Product name + at least one value proposition. Industries and personas
+          feed ICP scoring when ICP fields are left empty. See the{" "}
+          <a href="/help" className="font-medium underline">
+            setup guide
+          </a>{" "}
+          for a full walkthrough.
+        </p>
+      </div>
+
       <FormSection
         title="SaaS identity"
-        description="Core product details the agent uses when scoring leads and drafting outreach."
+        description="Core product details used when scoring leads and drafting outreach."
       >
         <Field
           label="Product name"
@@ -83,17 +95,24 @@ export function ProductForm({ initialData }: ProductFormProps) {
 
       <FormSection
         title="Positioning"
-        description="Value props and personas shape fit scoring and connection notes."
+        description="One tag per item — press Enter or paste comma-separated lists."
       >
         <ProductTagFields initialData={data} />
       </FormSection>
 
-      <FormSection
-        title="Case studies"
-        description="Short proof points the agent can reference when personalizing outreach."
-      >
-        <CaseStudyFields initialStudies={data.caseStudies} />
-      </FormSection>
+      <details className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <summary className="cursor-pointer text-base font-semibold text-zinc-900">
+          Optional case studies
+        </summary>
+        <p className="mt-3 text-sm text-zinc-500">
+          Short proof points the agent can reference in drafts. Example entries
+          are pre-filled for this workspace — replace with your real customer
+          stories when you have them.
+        </p>
+        <div className="mt-5">
+          <CaseStudyFields initialStudies={data.caseStudies} />
+        </div>
+      </details>
 
       <FormMessage state={state} />
       <SubmitButton label="Save product profile" pending={pending} />
@@ -130,22 +149,24 @@ function ProductTagFields({ initialData }: { initialData: UserProfileData }) {
 
       <TagInput
         label="Value propositions"
-        hint="Add 3–5 specific outcomes your product delivers."
+        hint="Concrete outcomes you deliver. Add 3–5 short tags, not a paragraph."
         values={valueProps}
         onChange={setValueProps}
-        placeholder="e.g. Cut API incident response time by 60%"
+        placeholder="e.g. Fill more gym memberships without ad spend"
       />
       <TagInput
         label="Target industries"
+        hint="Used for industry fit when ICP → Industries is empty."
         values={targetIndustries}
         onChange={setTargetIndustries}
-        placeholder="e.g. Fintech"
+        placeholder="e.g. Gyms"
       />
       <TagInput
         label="Target personas"
+        hint="Used as title hints when ICP → Target titles is empty."
         values={targetPersonas}
         onChange={setTargetPersonas}
-        placeholder="e.g. VP Engineering at Series B SaaS"
+        placeholder="e.g. Gym owner"
       />
     </>
   );

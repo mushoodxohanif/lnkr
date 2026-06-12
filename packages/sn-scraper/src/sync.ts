@@ -23,62 +23,6 @@ import type {
 } from "./types";
 import { humanDelay, humanMouseMove, isSalesNavigatorListUrl } from "./utils";
 
-function shouldTryApifyFallback(options: SyncOptions): boolean {
-  return (
-    options.fallbackApify === true || process.env.APIFY_FALLBACK === "true"
-  );
-}
-
-function isApifyTokenConfigured(): boolean {
-  return (
-    Boolean(process.env.APIFY_TOKEN?.trim()) &&
-    Boolean(process.env.APIFY_ACTOR_ID?.trim())
-  );
-}
-
-async function runApifyFallback(
-  listUrl: string,
-  maxResults: number,
-  blockedUrls: Set<string>,
-): Promise<{ scraped: number; skipped: number; errors: number }> {
-  if (!isApifyTokenConfigured()) {
-    await logActivity("apify_fallback_skipped", "Safety", undefined, {
-      reason: "APIFY_TOKEN and APIFY_ACTOR_ID required",
-      listUrl,
-    });
-    return { scraped: 0, skipped: 0, errors: 0 };
-  }
-
-  try {
-    const { importApifyLeadsForList } = await import(
-      "../../../lib/integrations/apify-sync"
-    );
-    const result = await importApifyLeadsForList(
-      listUrl,
-      maxResults,
-      blockedUrls,
-    );
-
-    await logActivity("apify_fallback_completed", "SnListConfig", undefined, {
-      listUrl,
-      ...result,
-    });
-
-    return result;
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown Apify fallback error";
-
-    await logActivity("apify_fallback_error", "SnListConfig", undefined, {
-      listUrl,
-      message,
-    });
-
-    console.error(`  Apify fallback failed: ${message}`);
-    return { scraped: 0, skipped: 0, errors: 1 };
-  }
-}
-
 async function logSafetyStop(error: SafetyStopError): Promise<void> {
   await logActivity(
     error.reason === "captcha" ? "captcha_detected" : "rate_limit_detected",
@@ -270,31 +214,6 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
             result.stoppedReason = "daily_limit";
           }
           break;
-        }
-        if (collected === 0 && shouldTryApifyFallback(options)) {
-          console.log(
-            "  No list rows found via Playwright — trying Apify fallback...",
-          );
-          const apifyResult = await runApifyFallback(
-            list.url,
-            remaining,
-            blockedUrls,
-          );
-          result.scraped += apifyResult.scraped;
-          result.skipped += apifyResult.skipped;
-          result.errors += apifyResult.errors;
-          remaining -= apifyResult.scraped;
-
-          if (apifyResult.scraped > 0) {
-            await markListSynced(list.url);
-            console.log(
-              `  Apify fallback: ${apifyResult.scraped} profile(s) imported.`,
-            );
-          } else {
-            console.warn(
-              "  Apify fallback returned no leads. Check APIFY_TOKEN and list URL.",
-            );
-          }
         }
       } catch (error) {
         if (error instanceof SafetyStopError) {
