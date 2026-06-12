@@ -78,7 +78,7 @@ Then on your **Vercel URL**: **Run cloud pipeline** (Enrich → Score → Build 
 
 ## Environment variables
 
-See [`.env.example`](.env.example). Production vars live in **Vercel**; GitHub Secrets hold `DATABASE_URL` and `LINKEDIN_SESSION_COOKIES` for CI sync.
+See [`.env.example`](.env.example) (local + Vercel), [`.github/env.example`](.github/env.example) (GitHub Actions), and [`packages/sn-scraper/.env.example`](packages/sn-scraper/.env.example) (scraper reference).
 
 ```bash
 vercel env pull .env.local   # local CLI / cookie export
