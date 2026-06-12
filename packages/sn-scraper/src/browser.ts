@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { type BrowserContext, chromium } from "playwright";
+import { type BrowserContext, chromium, type Page } from "playwright";
 import type { ScraperConfig } from "./types";
 
 export async function launchBrowser(
@@ -34,17 +34,30 @@ export async function launchBrowser(
   }
 }
 
+async function getOrCreatePage(context: BrowserContext): Promise<Page> {
+  const openPages = context.pages().filter((page) => !page.isClosed());
+
+  if (openPages.length > 0) {
+    for (let index = 1; index < openPages.length; index++) {
+      await openPages[index].close().catch(() => undefined);
+    }
+    return openPages[0];
+  }
+
+  return context.newPage();
+}
+
 export async function ensureLoggedIn(
   context: BrowserContext,
   loginTimeoutMs: number,
 ): Promise<boolean> {
-  for (const stale of context.pages()) {
-    await stale.close().catch(() => undefined);
-  }
-
-  const page = await context.newPage();
+  let page = await getOrCreatePage(context);
 
   async function goto(url: string): Promise<void> {
+    if (page.isClosed()) {
+      page = await getOrCreatePage(context);
+    }
+
     try {
       await page.goto(url, {
         waitUntil: "domcontentloaded",
@@ -56,6 +69,9 @@ export async function ensureLoggedIn(
         (error.message.includes("ERR_ABORTED") ||
           error.message.includes("frame was detached"))
       ) {
+        if (page.isClosed() || context.pages().length === 0) {
+          page = await getOrCreatePage(context);
+        }
         await page.goto(url, {
           waitUntil: "domcontentloaded",
           timeout: 60_000,

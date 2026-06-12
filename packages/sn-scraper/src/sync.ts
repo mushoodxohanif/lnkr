@@ -248,7 +248,7 @@ export async function runLoginFlow(headed?: boolean): Promise<boolean> {
   const context = await launchBrowser(config);
 
   try {
-    return ensureLoggedIn(context, config.loginTimeoutMs);
+    return await ensureLoggedIn(context, config.loginTimeoutMs);
   } finally {
     await context.close();
     await disconnectDb();

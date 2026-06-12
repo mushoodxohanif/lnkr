@@ -8,6 +8,14 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function withoutUndefined<T extends Record<string, unknown>>(
+  values: Partial<T>,
+): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(values).filter(([, value]) => value !== undefined),
+  ) as Partial<T>;
+}
+
 export function loadConfig(overrides?: Partial<ScraperConfig>): ScraperConfig {
   const browserProfileDir =
     process.env.BROWSER_PROFILE_DIR ??
@@ -21,6 +29,6 @@ export function loadConfig(overrides?: Partial<ScraperConfig>): ScraperConfig {
     headed: process.env.SCRAPE_HEADLESS !== "true",
     loginTimeoutMs: parsePositiveInt(process.env.LOGIN_TIMEOUT_MS, 600_000),
     maxPostsPerProfile: parsePositiveInt(process.env.MAX_POSTS_PER_PROFILE, 5),
-    ...overrides,
+    ...withoutUndefined(overrides ?? {}),
   };
 }

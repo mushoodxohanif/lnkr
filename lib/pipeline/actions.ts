@@ -283,10 +283,20 @@ export async function startLinkedInLogin(): Promise<PipelineActionState> {
         : "Login timed out. Complete sign-in in the browser window and try again.",
     };
   } catch (error) {
-    return emptyState(
+    const message =
       error instanceof Error
         ? error.message
-        : "Could not open the LinkedIn login browser.",
-    );
+        : "Could not open the LinkedIn login browser.";
+
+    if (
+      message.includes("Target.createTarget") ||
+      message.includes("Target page, context or browser has been closed")
+    ) {
+      return emptyState(
+        "Could not open a browser tab. Close any Chrome window opened by a previous lnkr login, then try again. If it keeps failing, delete your browser profile folder and sign in again.",
+      );
+    }
+
+    return emptyState(message);
   }
 }
