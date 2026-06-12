@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { parseSessionCookies } from "./session";
 import type { ScraperConfig } from "./types";
 
 function parsePositiveInt(value: string | undefined, fallback: number): number {
@@ -21,7 +22,9 @@ export function loadConfig(overrides?: Partial<ScraperConfig>): ScraperConfig {
     process.env.BROWSER_PROFILE_DIR ??
     join(homedir(), ".lnkr", "browser-profile");
 
-  return {
+  const cookiesRaw = process.env.LINKEDIN_SESSION_COOKIES;
+
+  const config = {
     browserProfileDir,
     dailyScrapeLimit: parsePositiveInt(process.env.DAILY_SCRAPE_LIMIT, 50),
     minDelayMs: parsePositiveInt(process.env.SCRAPE_MIN_DELAY_MS, 4000),
@@ -29,6 +32,25 @@ export function loadConfig(overrides?: Partial<ScraperConfig>): ScraperConfig {
     headed: process.env.SCRAPE_HEADLESS !== "true",
     loginTimeoutMs: parsePositiveInt(process.env.LOGIN_TIMEOUT_MS, 600_000),
     maxPostsPerProfile: parsePositiveInt(process.env.MAX_POSTS_PER_PROFILE, 5),
+    sessionMode: cookiesRaw?.trim()
+      ? ("cookies" as const)
+      : ("profile" as const),
     ...withoutUndefined(overrides ?? {}),
-  };
+  } as ScraperConfig;
+
+  if (config.sessionMode === "cookies") {
+    config.sessionCookies =
+      overrides?.sessionCookies ??
+      (cookiesRaw?.trim() ? parseSessionCookies(cookiesRaw) : undefined);
+
+    if (!config.sessionCookies?.length) {
+      throw new Error(
+        "sessionMode is cookies but LINKEDIN_SESSION_COOKIES is missing or empty.",
+      );
+    }
+  } else {
+    config.sessionCookies = undefined;
+  }
+
+  return config;
 }

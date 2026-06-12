@@ -27,11 +27,16 @@ Options:
   --help, -h         Show this help
 
 Environment:
-  BROWSER_PROFILE_DIR   Persistent Chrome profile (default: ~/.lnkr/browser-profile)
-  DAILY_SCRAPE_LIMIT    Max profiles per day (default: 50)
-  SCRAPE_MIN_DELAY_MS   Min delay between profiles (default: 4000)
-  SCRAPE_MAX_DELAY_MS   Max delay between profiles (default: 10000)
-  DATABASE_URL          PostgreSQL connection string (required for --all)
+  BROWSER_PROFILE_DIR        Persistent Chrome profile (default: ~/.lnkr/browser-profile)
+  LINKEDIN_SESSION_COOKIES   JSON cookie array for headless/CI sync (see bun sn:export-cookies)
+  DAILY_SCRAPE_LIMIT         Max profiles per day (default: 50)
+  SCRAPE_MIN_DELAY_MS        Min delay between profiles (default: 4000)
+  SCRAPE_MAX_DELAY_MS        Max delay between profiles (default: 10000)
+  SCRAPE_HEADLESS            Set to true for headless mode (default: headed locally)
+  DATABASE_URL               PostgreSQL connection string (required for --all)
+
+Export session for CI:
+  bun sn:export-cookies        Dump LinkedIn cookies from local profile to stdout (JSON)
 
 Safety:
   - Never automates LinkedIn login — you log in manually once

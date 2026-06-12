@@ -16,6 +16,7 @@
     "db:push": "bunx prisma db push",
     "db:studio": "bunx prisma studio",
     "sn:sync": "bun run packages/sn-scraper/src/cli.ts",
+    "sn:export-cookies": "bun run packages/sn-scraper/src/export-cookies.ts",
     "enrich:leads": "bun run lib/enrichment/cli.ts",
     "score:leads": "bun run lib/icp/cli.ts",
     "generate:content": "bun run lib/agent/cli.ts",

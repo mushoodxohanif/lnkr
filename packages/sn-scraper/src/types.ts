@@ -25,6 +25,10 @@ export type ScrapedLead = {
   rawProfileSnapshot?: Record<string, unknown>;
 };
 
+import type { Cookie } from "playwright";
+
+export type SessionMode = "profile" | "cookies";
+
 export type ScraperConfig = {
   browserProfileDir: string;
   dailyScrapeLimit: number;
@@ -33,6 +37,8 @@ export type ScraperConfig = {
   headed: boolean;
   loginTimeoutMs: number;
   maxPostsPerProfile: number;
+  sessionMode: SessionMode;
+  sessionCookies?: Cookie[];
 };
 
 export type SyncOptions = {

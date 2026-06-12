@@ -9,6 +9,7 @@ import {
   canRunPlaywrightSync,
   envConfigHint,
   getPipelineBatchLimit,
+  isGitHubSyncConfigured,
   isVercelDeployment,
   LOCAL_SYNC_COMMANDS,
 } from "@/lib/runtime/deployment";
@@ -65,31 +66,56 @@ function formatSyncResult(result: SyncResult): PipelineActionState {
   };
 }
 
-export async function syncEnabledLists(): Promise<PipelineActionState> {
-  if (!canRunPlaywrightSync()) {
-    return emptyState(
-      `Sync cannot run on Vercel. On your computer: ${LOCAL_SYNC_COMMANDS.envPull} then ${LOCAL_SYNC_COMMANDS.sync}`,
-    );
-  }
-
-  try {
-    const { runPlaywrightSync } = await import(
-      "@/lib/pipeline/playwright-local"
-    );
-    const result = await runPlaywrightSync();
-    return formatSyncResult(result);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Sync failed unexpectedly.";
-
-    if (message.includes("No enabled lists")) {
-      return emptyState(
-        "No enabled lists found. Add Sales Navigator lists in Settings first.",
+export async function syncEnabledLists(
+  limit?: number,
+): Promise<PipelineActionState> {
+  if (canRunPlaywrightSync()) {
+    try {
+      const { runPlaywrightSync } = await import(
+        "@/lib/pipeline/playwright-local"
       );
-    }
+      const result = await runPlaywrightSync();
+      return formatSyncResult(result);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Sync failed unexpectedly.";
 
-    return emptyState(message);
+      if (message.includes("No enabled lists")) {
+        return emptyState(
+          "No enabled lists found. Add Sales Navigator lists in Settings first.",
+        );
+      }
+
+      return emptyState(message);
+    }
   }
+
+  if (isGitHubSyncConfigured()) {
+    try {
+      const { triggerGitHubSync } = await import("@/lib/github/trigger-sync");
+      const result = await triggerGitHubSync({ limit });
+
+      revalidatePipelinePaths();
+
+      return {
+        success: true,
+        message: result.runUrl
+          ? `GitHub sync started. Track progress: ${result.runUrl}`
+          : "GitHub sync workflow started. Check the Actions tab in your repository, then run the cloud pipeline when it finishes.",
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to trigger GitHub sync workflow.";
+
+      return emptyState(message);
+    }
+  }
+
+  return emptyState(
+    `Sync cannot run on Vercel. On your computer: ${LOCAL_SYNC_COMMANDS.envPull} then ${LOCAL_SYNC_COMMANDS.sync}`,
+  );
 }
 
 export async function enrichPendingLeads(): Promise<PipelineActionState> {

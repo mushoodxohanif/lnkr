@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { LocalSyncGuide } from "@/components/dashboard/local-sync-guide";
+import {
+  GitHubSessionSetup,
+  LocalSyncGuide,
+} from "@/components/dashboard/local-sync-guide";
 import {
   buildDailyBatch,
   enrichPendingLeads,
@@ -21,6 +24,17 @@ type PipelineActionsProps = {
 };
 
 function SyncProviderHint({ config }: { config: PipelineConfig }) {
+  if (config.syncProvider === "github") {
+    if (config.sessionConfigured) return null;
+
+    return (
+      <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        LinkedIn session cookies are not configured for GitHub sync. Complete
+        session setup in Settings → Safety before syncing.
+      </p>
+    );
+  }
+
   if (!config.playwrightAvailable) return null;
   if (config.browserProfileExists) return null;
 
@@ -29,6 +43,47 @@ function SyncProviderHint({ config }: { config: PipelineConfig }) {
       No LinkedIn session saved yet. Run{" "}
       <code className="font-mono text-xs">{LOCAL_SYNC_COMMANDS.login}</code> on
       your computer, or use Settings → Safety when running locally.
+    </p>
+  );
+}
+
+function PipelineStatusMessage({ status }: { status: PipelineActionState }) {
+  const urlMatch = status.message.match(/(https:\/\/github\.com\/\S+)/);
+
+  if (urlMatch && status.success) {
+    const url = urlMatch[1];
+    const prefix = status.message.slice(0, urlMatch.index).trimEnd();
+
+    return (
+      <p
+        className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+        role="status"
+      >
+        {prefix ? `${prefix} ` : null}
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium underline hover:text-emerald-900"
+        >
+          View GitHub Actions run
+        </a>
+        . GitHub sync takes ~10–30 min — run the cloud pipeline when it
+        finishes.
+      </p>
+    );
+  }
+
+  return (
+    <p
+      className={`rounded-lg px-3 py-2 text-sm ${
+        status.success
+          ? "bg-emerald-50 text-emerald-800"
+          : "bg-red-50 text-red-800"
+      }`}
+      role="status"
+    >
+      {status.message}
     </p>
   );
 }
@@ -96,6 +151,8 @@ export function PipelineActions({
   const [activeStep, setActiveStep] = useState<string | null>(null);
   const [status, setStatus] = useState<PipelineActionState | null>(null);
   const isVercel = config.deploymentPlatform === "vercel";
+  const isGitHubSync = config.syncProvider === "github";
+  const canSync = config.playwrightAvailable || isGitHubSync;
   const envHint = isVercel
     ? "Set this in Vercel → Project → Settings → Environment Variables."
     : "Set this in .env or pull from Vercel with `vercel env pull`.";
@@ -111,25 +168,37 @@ export function PipelineActions({
   }
 
   const syncDisabled =
-    !config.playwrightAvailable || config.enabledListCount === 0;
-  const syncDisabledReason = !config.playwrightAvailable
-    ? `Run locally: ${LOCAL_SYNC_COMMANDS.sync}`
+    !canSync ||
+    config.enabledListCount === 0 ||
+    (isGitHubSync && !config.sessionConfigured);
+
+  const syncDisabledReason = !canSync
+    ? isVercel
+      ? `Configure GitHub sync (GITHUB_SYNC_TOKEN, GITHUB_REPO) or run locally: ${LOCAL_SYNC_COMMANDS.sync}`
+      : undefined
     : config.enabledListCount === 0
       ? "Add and enable at least one Sales Navigator list in Settings."
-      : undefined;
+      : isGitHubSync && !config.sessionConfigured
+        ? "Complete LinkedIn session setup in Settings → Safety first."
+        : undefined;
 
-  const syncDescription = config.playwrightAvailable
-    ? "Pull leads from enabled Sales Navigator lists using Playwright on this machine."
-    : "Runs on your computer with the same DATABASE_URL as this deployment.";
+  const syncLabel = isGitHubSync ? "Sync lists (GitHub)" : "Sync lists";
+
+  const syncDescription = isGitHubSync
+    ? "Trigger Sales Navigator sync via GitHub Actions (~10–30 min). Run the cloud pipeline after it completes."
+    : config.playwrightAvailable
+      ? "Pull leads from enabled Sales Navigator lists using Playwright on this machine."
+      : "Runs on your computer with the same DATABASE_URL as this deployment.";
 
   const steps: PipelineStep[] = [
     {
       id: "sync",
-      label: "Sync lists",
+      label: syncLabel,
       description: syncDescription,
       action: syncEnabledLists,
       disabled: syncDisabled,
       disabledReason: syncDisabledReason,
+      hidden: !canSync,
     },
     {
       id: "enrich",
@@ -165,8 +234,13 @@ export function PipelineActions({
   if (variant === "login-only") {
     return (
       <div className="space-y-3">
-        {isVercel ? (
-          <LocalSyncGuide deploymentPlatform={config.deploymentPlatform} />
+        {isGitHubSync ? (
+          <GitHubSessionSetup />
+        ) : isVercel ? (
+          <LocalSyncGuide
+            syncProvider={config.syncProvider}
+            sessionConfigured={config.sessionConfigured}
+          />
         ) : (
           <ActionButton
             label="Open LinkedIn login"
@@ -176,18 +250,7 @@ export function PipelineActions({
             onClick={() => runStep("login", startLinkedInLogin)}
           />
         )}
-        {status ? (
-          <p
-            className={`rounded-lg px-3 py-2 text-sm ${
-              status.success
-                ? "bg-emerald-50 text-emerald-800"
-                : "bg-red-50 text-red-800"
-            }`}
-            role="status"
-          >
-            {status.message}
-          </p>
-        ) : null}
+        {status ? <PipelineStatusMessage status={status} /> : null}
       </div>
     );
   }
@@ -198,12 +261,13 @@ export function PipelineActions({
       <div className="space-y-3">
         <LocalSyncGuide
           compact={isVercel}
-          deploymentPlatform={config.deploymentPlatform}
+          syncProvider={config.syncProvider}
+          sessionConfigured={config.sessionConfigured}
         />
         <SyncProviderHint config={config} />
-        {config.playwrightAvailable ? (
+        {canSync ? (
           <ActionButton
-            label="Sync enabled lists"
+            label={isGitHubSync ? "Sync lists (GitHub)" : "Sync enabled lists"}
             description={syncStep.description}
             pending={pending}
             disabled={syncStep.disabled}
@@ -212,23 +276,15 @@ export function PipelineActions({
             onClick={() => runStep("sync", syncStep.action)}
           />
         ) : null}
-        {status ? (
-          <p
-            className={`rounded-lg px-3 py-2 text-sm ${
-              status.success
-                ? "bg-emerald-50 text-emerald-800"
-                : "bg-red-50 text-red-800"
-            }`}
-            role="status"
-          >
-            {status.message}
-          </p>
-        ) : null}
+        {status ? <PipelineStatusMessage status={status} /> : null}
       </div>
     );
   }
 
-  const visibleSteps = variant === "compact" ? steps.slice(2) : steps;
+  const visibleSteps =
+    variant === "compact"
+      ? steps.slice(2)
+      : steps.filter((step) => !step.hidden);
   const runAllDisabled =
     pending ||
     !config.enrichmentConfigured ||
@@ -239,7 +295,10 @@ export function PipelineActions({
   return (
     <div className="space-y-4">
       {variant === "full" && isVercel ? (
-        <LocalSyncGuide deploymentPlatform={config.deploymentPlatform} />
+        <LocalSyncGuide
+          syncProvider={config.syncProvider}
+          sessionConfigured={config.sessionConfigured}
+        />
       ) : variant === "full" ? (
         <SyncProviderHint config={config} />
       ) : null}
@@ -267,7 +326,9 @@ export function PipelineActions({
             </p>
             <p className="mt-0.5 text-sm text-zinc-600">
               {isVercel
-                ? "Enrich, score, and build today's batch on Vercel."
+                ? isGitHubSync
+                  ? "Enrich, score, and build today's batch on Vercel. Run this after GitHub sync finishes."
+                  : "Enrich, score, and build today's batch on Vercel."
                 : "Sync, enrich, score, and build today's batch in one go."}
             </p>
           </div>
@@ -286,18 +347,7 @@ export function PipelineActions({
         </div>
       ) : null}
 
-      {status ? (
-        <p
-          className={`rounded-lg px-3 py-2 text-sm ${
-            status.success
-              ? "bg-emerald-50 text-emerald-800"
-              : "bg-red-50 text-red-800"
-          }`}
-          role="status"
-        >
-          {status.message}
-        </p>
-      ) : null}
+      {status ? <PipelineStatusMessage status={status} /> : null}
     </div>
   );
 }

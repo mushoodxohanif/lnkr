@@ -12,15 +12,15 @@ LinkedIn Sales Navigator outreach agent — draft-only, human-in-the-loop. Syncs
 | App | [Next.js 16](https://nextjs.org) on [Vercel](https://vercel.com) |
 | Database | PostgreSQL via [Prisma](https://prisma.io) ([Neon](https://neon.tech)) |
 | AI | Google Gemini via Vercel AI SDK |
-| SN ingestion | Playwright local runner (`packages/sn-scraper/`) |
+| SN ingestion | Playwright — [GitHub Actions](.github/workflows/sn-sync.yml) or local runner (`packages/sn-scraper/`) |
 
 ## Architecture
 
-| Runs on Vercel | Runs on your computer |
-|----------------|----------------------|
-| Dashboard, settings, history | `bun sn:sync --login` |
-| Enrich, score, build batch | `bun sn:sync --all` |
-| | (same `DATABASE_URL` as production) |
+| Runs on Vercel | Runs in GitHub Actions | Runs locally (optional) |
+|----------------|------------------------|-------------------------|
+| Dashboard, settings, history | `bun sn:sync --all` (scheduled + on-demand) | `bun sn:sync --login` / `--all` |
+| Enrich, score, build batch | Playwright headless → same Neon DB | Same DB via `DATABASE_URL` |
+| **Sync lists** button → triggers workflow | | Dev / fallback without GitHub setup |
 
 **Full walkthrough:** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) (also at `/help` on your deployment).
 
@@ -34,11 +34,39 @@ LinkedIn Sales Navigator outreach agent — draft-only, human-in-the-loop. Syncs
 | `DATABASE_URL` | PostgreSQL connection string |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini — scoring and AI drafts |
 | `ENRICHMENT_API_KEY` | DataLayer or Apollo — company enrichment |
+| `GITHUB_SYNC_TOKEN` | Fine-grained PAT with **Actions: Read and write** |
+| `GITHUB_REPO` | e.g. `your-org/lnkr` |
+| `GITHUB_SYNC_SESSION_CONFIGURED` | Set to `true` after cookies are in GitHub Secrets |
 
-3. Deploy and open your production URL
-4. Locally: `vercel env pull .env.local && bun db:push`
+Optional: `GITHUB_SYNC_WORKFLOW` (default `sn-sync.yml`), `GITHUB_SYNC_REF` (default `main`).
 
-## Local sync (required for Sales Navigator)
+3. Add **GitHub Secrets** (repo → Settings → Secrets):
+
+| Secret | Description |
+|--------|-------------|
+| `DATABASE_URL` | Same Neon connection string as Vercel |
+| `LINKEDIN_SESSION_COOKIES` | JSON from `bun sn:export-cookies` (see below) |
+
+4. Deploy and open your production URL
+5. Locally (one-time): `vercel env pull .env.local && bun db:push`
+
+## LinkedIn sync
+
+### GitHub Actions (recommended for the sales team)
+
+One-time admin setup on your computer:
+
+```bash
+vercel env pull .env.local
+bun sn:sync --login                              # sign in once
+bun sn:export-cookies | gh secret set LINKEDIN_SESSION_COOKIES --repo owner/lnkr
+```
+
+Then on **Vercel**: click **Sync lists (GitHub)** → wait ~10–30 min → **Run cloud pipeline**.
+
+The workflow also runs on a weekday schedule (default 11:00 UTC). Re-export cookies monthly or when sync fails with a login timeout.
+
+### Local sync (dev or fallback)
 
 ```bash
 vercel env pull .env.local
@@ -50,10 +78,10 @@ Then on your **Vercel URL**: **Run cloud pipeline** (Enrich → Score → Build 
 
 ## Environment variables
 
-See [`.env.example`](.env.example). Production vars live in **Vercel**; pull them locally for sync:
+See [`.env.example`](.env.example). Production vars live in **Vercel**; GitHub Secrets hold `DATABASE_URL` and `LINKEDIN_SESSION_COOKIES` for CI sync.
 
 ```bash
-vercel env pull .env.local
+vercel env pull .env.local   # local CLI / cookie export
 ```
 
 ## Scripts
@@ -61,7 +89,8 @@ vercel env pull .env.local
 ```bash
 bun dev              # Local Next.js (optional — use Vercel URL for daily work)
 bun db:push          # Push Prisma schema
-bun sn:sync --all    # Playwright SN sync (local only)
+bun sn:sync --all    # Playwright SN sync (local or GitHub Actions)
+bun sn:export-cookies  # Dump LinkedIn cookies for GitHub Secrets
 bun enrich:leads     # Company enrichment (CLI alternative)
 bun score:leads      # Hybrid ICP scoring
 bun daily:rank       # Top-50 ranker + drafts
@@ -79,8 +108,8 @@ bun daily:rank       # Top-50 ranker + drafts
 ## Safety and compliance
 
 - **Draft-only** — zero auto-posting or auto-connecting
-- **Rate limits** — hard cap on daily profile scrapes (local sync)
-- **Session-based auth** — LinkedIn login is manual on your computer
+- **Rate limits** — hard cap on daily profile scrapes (GitHub Actions or local sync)
+- **Session-based auth** — LinkedIn login is manual; cookies exported to GitHub Secrets for CI
 - **Do-not-contact list** — blocklist in settings
 
 > Scraping LinkedIn Sales Navigator may violate LinkedIn's Terms of Service. You assume all risk. Licensed under GPL v3 — see [LICENSE](LICENSE).

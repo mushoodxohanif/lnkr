@@ -1,5 +1,5 @@
 import type { BrowserContext } from "playwright";
-import { ensureLoggedIn, launchBrowser } from "./browser";
+import { closeBrowserContext, ensureLoggedIn, launchBrowser } from "./browser";
 import { loadConfig } from "./config";
 import { scrapeListPage } from "./list-scraper";
 import { enrichLeadFromProfile } from "./profile-scraper";
@@ -237,20 +237,20 @@ export async function runSync(options: SyncOptions): Promise<SyncResult> {
     return result;
   } finally {
     if (context) {
-      await context.close();
+      await closeBrowserContext(context);
     }
     await disconnectDb();
   }
 }
 
 export async function runLoginFlow(headed?: boolean): Promise<boolean> {
-  const config = loadConfig({ headed });
+  const config = loadConfig({ headed, sessionMode: "profile" });
   const context = await launchBrowser(config);
 
   try {
     return await ensureLoggedIn(context, config.loginTimeoutMs);
   } finally {
-    await context.close();
+    await closeBrowserContext(context);
     await disconnectDb();
   }
 }

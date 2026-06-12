@@ -1,24 +1,75 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { type BrowserContext, chromium, type Page } from "playwright";
+import {
+  type Browser,
+  type BrowserContext,
+  chromium,
+  type Page,
+} from "playwright";
 import type { ScraperConfig } from "./types";
 
-export async function launchBrowser(
-  config: ScraperConfig,
-): Promise<BrowserContext> {
-  await mkdir(dirname(config.browserProfileDir), { recursive: true });
+const CONTEXT_BROWSER = Symbol("contextBrowser");
 
-  const launchOptions = {
-    headless: !config.headed,
-    viewport: { width: 1440, height: 900 },
+type BrowserContextWithBrowser = BrowserContext & {
+  [CONTEXT_BROWSER]?: Browser;
+};
+
+function getContextOptions(_config: ScraperConfig) {
+  return {
+    viewport: { width: 1440, height: 900 } as const,
     userAgent:
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  };
+}
+
+function getLaunchOptions(config: ScraperConfig) {
+  return {
+    headless: !config.headed,
     args: [
       "--disable-blink-features=AutomationControlled",
       "--no-first-run",
       "--no-default-browser-check",
     ],
     ignoreDefaultArgs: ["--enable-automation"],
+  };
+}
+
+async function launchCookieContext(
+  config: ScraperConfig,
+): Promise<BrowserContext> {
+  if (!config.sessionCookies?.length) {
+    throw new Error(
+      "sessionMode is cookies but no session cookies were provided.",
+    );
+  }
+
+  const launchOptions = getLaunchOptions(config);
+  const contextOptions = getContextOptions(config);
+
+  let browser: Browser;
+  try {
+    browser = await chromium.launch({
+      ...launchOptions,
+      channel: "chrome",
+    });
+  } catch {
+    browser = await chromium.launch(launchOptions);
+  }
+
+  const context = await browser.newContext(contextOptions);
+  await context.addCookies(config.sessionCookies);
+  (context as BrowserContextWithBrowser)[CONTEXT_BROWSER] = browser;
+  return context;
+}
+
+async function launchProfileContext(
+  config: ScraperConfig,
+): Promise<BrowserContext> {
+  await mkdir(dirname(config.browserProfileDir), { recursive: true });
+
+  const launchOptions = {
+    ...getLaunchOptions(config),
+    ...getContextOptions(config),
   };
 
   try {
@@ -31,6 +82,26 @@ export async function launchBrowser(
       config.browserProfileDir,
       launchOptions,
     );
+  }
+}
+
+export async function launchBrowser(
+  config: ScraperConfig,
+): Promise<BrowserContext> {
+  if (config.sessionMode === "cookies") {
+    return launchCookieContext(config);
+  }
+
+  return launchProfileContext(config);
+}
+
+export async function closeBrowserContext(
+  context: BrowserContext,
+): Promise<void> {
+  const browser = (context as BrowserContextWithBrowser)[CONTEXT_BROWSER];
+  await context.close();
+  if (browser) {
+    await browser.close();
   }
 }
 

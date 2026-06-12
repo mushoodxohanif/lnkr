@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { GitHubSessionSetup } from "@/components/dashboard/local-sync-guide";
 import { PipelineActions } from "@/components/dashboard/pipeline-actions";
 import {
   Field,
@@ -66,6 +67,8 @@ export function SafetyForm({
 
   const statusMessage = addState.message || removeState.message;
   const statusSuccess = addState.success || removeState.success;
+  const isGitHubSync = pipelineConfig.syncProvider === "github";
+  const isLocalSync = pipelineConfig.syncProvider === "local";
 
   return (
     <div className="space-y-6">
@@ -110,9 +113,11 @@ export function SafetyForm({
       <FormSection
         title="Browser session"
         description={
-          pipelineConfig.playwrightAvailable
+          isLocalSync
             ? "Playwright stores your LinkedIn session in a persistent Chrome profile on this machine."
-            : "On Vercel, LinkedIn login and sync run on your computer — not in the cloud. Use the commands below with the same DATABASE_URL as production."
+            : isGitHubSync
+              ? "LinkedIn session cookies live in GitHub Secrets and are used by the sn-sync workflow. Re-export when sync fails with a login timeout."
+              : "On Vercel, LinkedIn login and sync run on your computer — not in the cloud. Use the commands below with the same DATABASE_URL as production."
         }
       >
         <dl className="grid gap-4 sm:grid-cols-2">
@@ -121,12 +126,18 @@ export function SafetyForm({
               Sync method
             </dt>
             <dd className="mt-1 text-lg font-semibold text-zinc-900">
-              Playwright (local machine)
+              {isGitHubSync
+                ? "GitHub Actions"
+                : isLocalSync
+                  ? "Playwright (local machine)"
+                  : "Local CLI (fallback)"}
             </dd>
             <p className="mt-1 text-xs text-zinc-500">
-              {pipelineConfig.playwrightAvailable
-                ? "Sync uses your local browser. Sign in below before your first sync."
-                : "Configure lists here on Vercel; run sync from your laptop."}
+              {isGitHubSync
+                ? "Trigger sync from the dashboard — scraping runs in GitHub Actions."
+                : isLocalSync
+                  ? "Sync uses your local browser. Sign in below before your first sync."
+                  : "Configure lists here on Vercel; run sync from your laptop."}
             </p>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
@@ -135,24 +146,32 @@ export function SafetyForm({
             </dt>
             <dd
               className={`mt-1 text-lg font-semibold ${
-                pipelineConfig.playwrightAvailable &&
-                safety.browserProfileExists
+                (isLocalSync && safety.browserProfileExists) ||
+                (isGitHubSync && pipelineConfig.sessionConfigured)
                   ? "text-emerald-700"
                   : "text-amber-700"
               }`}
             >
-              {pipelineConfig.playwrightAvailable && safety.browserProfileExists
-                ? "Profile saved locally"
-                : "Sign-in on your computer"}
+              {isGitHubSync
+                ? pipelineConfig.sessionConfigured
+                  ? "Cookies configured"
+                  : "Session setup required"
+                : isLocalSync && safety.browserProfileExists
+                  ? "Profile saved locally"
+                  : "Sign-in on your computer"}
             </dd>
             <p className="mt-1 text-xs text-zinc-500">
-              {pipelineConfig.playwrightAvailable && safety.browserProfileExists
-                ? "Session is on this machine — ready to sync."
-                : "Run `bun sn:sync --login` locally after `vercel env pull`."}
+              {isGitHubSync
+                ? pipelineConfig.sessionConfigured
+                  ? "GitHub Secrets has LinkedIn cookies — ready to sync from the dashboard."
+                  : "Admin must export cookies to LINKEDIN_SESSION_COOKIES in GitHub Secrets."
+                : isLocalSync && safety.browserProfileExists
+                  ? "Session is on this machine — ready to sync."
+                  : "Run `bun sn:sync --login` locally after `vercel env pull`."}
             </p>
           </div>
         </dl>
-        {pipelineConfig.playwrightAvailable ? (
+        {isLocalSync ? (
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
             <p className="text-sm font-medium text-zinc-900">
               Profile directory
@@ -162,7 +181,11 @@ export function SafetyForm({
             </p>
           </div>
         ) : null}
-        <PipelineActions config={pipelineConfig} variant="login-only" />
+        {isGitHubSync ? (
+          <GitHubSessionSetup />
+        ) : (
+          <PipelineActions config={pipelineConfig} variant="login-only" />
+        )}
       </FormSection>
 
       <FormSection

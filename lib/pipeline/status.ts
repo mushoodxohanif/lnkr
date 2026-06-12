@@ -6,6 +6,9 @@ import {
   canRunPlaywrightSync,
   getDeploymentPlatform,
   getPipelineBatchLimit,
+  getSyncProvider,
+  isGitHubSessionConfigured,
+  isGitHubSyncConfigured,
 } from "@/lib/runtime/deployment";
 import { getSafetyConfig } from "@/lib/safety/config";
 
@@ -17,6 +20,9 @@ export type PipelineConfig = {
   enabledListCount: number;
   deploymentPlatform: ReturnType<typeof getDeploymentPlatform>;
   playwrightAvailable: boolean;
+  syncProvider: ReturnType<typeof getSyncProvider>;
+  githubSyncConfigured: boolean;
+  sessionConfigured: boolean;
   batchLimit: number;
 };
 
@@ -36,6 +42,11 @@ export async function getPipelineConfig(): Promise<PipelineConfig> {
     enabledListCount,
     deploymentPlatform: getDeploymentPlatform(),
     playwrightAvailable: canRunPlaywrightSync(),
+    syncProvider: getSyncProvider(),
+    githubSyncConfigured: isGitHubSyncConfigured(),
+    sessionConfigured: canRunPlaywrightSync()
+      ? safety.browserProfileExists
+      : isGitHubSessionConfigured(),
     batchLimit: getPipelineBatchLimit(),
   };
 }
