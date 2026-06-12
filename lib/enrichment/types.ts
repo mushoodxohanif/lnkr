@@ -1,9 +1,10 @@
-export type EnrichmentProviderName = "datalayer" | "apollo";
+export type EnrichmentProviderName = "datalayer" | "apollo" | "profile";
 
 export type CompanyEnrichmentInput = {
   domain?: string;
   companyName?: string;
   linkedInUrl?: string;
+  rawProfileSnapshot?: unknown;
 };
 
 export type ContactEnrichmentInput = {
@@ -114,6 +115,7 @@ export type EnrichLeadsBatchResult = {
   skipped: number;
   notFound: number;
   errors: number;
+  blockingError?: string;
   results: EnrichLeadResult[];
 };
 

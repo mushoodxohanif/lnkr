@@ -1,6 +1,7 @@
 import type { LeadStatus } from "@/app/generated/prisma/client";
 
 export const FINALIZED_LEAD_STATUSES: LeadStatus[] = [
+  "NEW",
   "QUALIFIED",
   "SENT",
   "SKIPPED",

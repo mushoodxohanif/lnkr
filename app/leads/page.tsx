@@ -26,7 +26,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
     <DashboardShell
       wide
       title="All leads"
-      description="Scored leads from Sales Navigator — filter, add notes, and export to CSV. Includes qualified, sent, skipped, and snoozed leads."
+      description="All scraped leads from Sales Navigator — filter by status, add notes, and export to CSV."
     >
       <Suspense fallback={null}>
         <FinalizedLeadsPanel

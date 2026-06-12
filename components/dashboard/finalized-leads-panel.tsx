@@ -153,11 +153,14 @@ export function FinalizedLeadsPanel({
               onChange={(event) => applyFilters({ status: event.target.value })}
             >
               <option value="ALL">All statuses</option>
-              {FINALIZED_LEAD_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {STATUS_LABELS[status]}
-                </option>
-              ))}
+              <option value="NEW">New (pending score)</option>
+              {FINALIZED_LEAD_STATUSES.filter((s) => s !== "NEW").map(
+                (status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABELS[status]}
+                  </option>
+                ),
+              )}
             </select>
           </label>
 

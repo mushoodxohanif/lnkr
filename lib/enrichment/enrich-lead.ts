@@ -1,17 +1,25 @@
 import { db } from "@/lib/db";
 import { logEnrichmentActivity } from "@/lib/enrichment/activity";
+import { isEnrichmentBlockingError } from "@/lib/enrichment/blocking";
 import {
   getCachedCompanyEnrichment,
   isEnrichmentStale,
   linkLeadToCompanyEnrichment,
   upsertCompanyEnrichment,
 } from "@/lib/enrichment/cache";
-import { isEnrichmentConfigured } from "@/lib/enrichment/config";
+import {
+  getEnrichmentProviderName,
+  isEnrichmentConfigured,
+} from "@/lib/enrichment/config";
 import {
   resolveCompanyInputFromLead,
   resolveContactInputFromLead,
 } from "@/lib/enrichment/domain";
 import { getEnrichmentProvider } from "@/lib/enrichment/providers";
+import {
+  enrichCompanyFromProfile,
+  profileDomainFromCompany,
+} from "@/lib/enrichment/providers/profile";
 import { enrichContact } from "@/lib/enrichment/service";
 import type {
   EnrichLeadResult,
@@ -31,7 +39,8 @@ export async function enrichLead(
     return {
       leadId,
       status: "skipped",
-      message: "ENRICHMENT_API_KEY is not configured.",
+      message:
+        "Enrichment is not configured. Set ENRICHMENT_PROVIDER=profile or add ENRICHMENT_API_KEY.",
     };
   }
 
@@ -70,8 +79,14 @@ export async function enrichLead(
     };
   }
 
-  if (companyInput.domain && !options.forceRefresh) {
-    const cached = await getCachedCompanyEnrichment(companyInput.domain);
+  const cacheDomain =
+    companyInput.domain ??
+    (companyInput.companyName
+      ? profileDomainFromCompany(companyInput.companyName)
+      : undefined);
+
+  if (cacheDomain && !options.forceRefresh) {
+    const cached = await getCachedCompanyEnrichment(cacheDomain);
     if (cached && !isEnrichmentStale(cached.enrichedAt)) {
       await linkLeadToCompanyEnrichment(leadId, cached.id);
       return {
@@ -84,8 +99,13 @@ export async function enrichLead(
   }
 
   try {
-    const provider = getEnrichmentProvider();
-    const enriched = await provider.enrichCompany(companyInput);
+    const enriched =
+      getEnrichmentProviderName() === "profile"
+        ? enrichCompanyFromProfile(lead)
+        : await getEnrichmentProvider().enrichCompany({
+            ...companyInput,
+            rawProfileSnapshot: lead.rawProfileSnapshot,
+          });
 
     if (!enriched) {
       await logEnrichmentActivity("enrich_company_not_found", "Lead", leadId, {
@@ -115,7 +135,7 @@ export async function enrichLead(
       },
     );
 
-    if (options.enrichContact) {
+    if (options.enrichContact && getEnrichmentProviderName() !== "profile") {
       const contactInput = resolveContactInputFromLead(lead);
       await enrichContact(contactInput, {
         forceRefresh: options.forceRefresh,
@@ -152,7 +172,16 @@ export async function enrichLeadsBatch(
   options: EnrichLeadsBatchOptions = {},
 ): Promise<EnrichLeadsBatchResult> {
   const leads = await db.lead.findMany({
-    where: options.onlyUnenriched ? { companyEnrichmentId: null } : undefined,
+    where: options.onlyUnenriched
+      ? {
+          companyEnrichmentId: null,
+          status: { not: "ARCHIVED" },
+          scrapedAt: { not: null },
+        }
+      : {
+          status: { not: "ARCHIVED" },
+          scrapedAt: { not: null },
+        },
     orderBy: { scrapedAt: "desc" },
     take: options.limit ?? 50,
     select: { id: true },
@@ -164,6 +193,7 @@ export async function enrichLeadsBatch(
   let skipped = 0;
   let notFound = 0;
   let errors = 0;
+  let blockingError: string | undefined;
 
   for (const lead of leads) {
     try {
@@ -189,11 +219,17 @@ export async function enrichLeadsBatch(
       }
     } catch (error) {
       errors += 1;
+      const message =
+        error instanceof Error ? error.message : "Unknown enrichment error";
+
+      if (!blockingError && isEnrichmentBlockingError(error)) {
+        blockingError = message;
+      }
+
       results.push({
         leadId: lead.id,
         status: "skipped",
-        message:
-          error instanceof Error ? error.message : "Unknown enrichment error",
+        message,
       });
     }
   }
@@ -205,6 +241,7 @@ export async function enrichLeadsBatch(
     skipped,
     notFound,
     errors,
+    blockingError,
     results,
   };
 

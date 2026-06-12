@@ -33,7 +33,8 @@ LinkedIn Sales Navigator outreach agent — draft-only, human-in-the-loop. Syncs
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini — scoring and AI drafts |
-| `ENRICHMENT_API_KEY` | DataLayer or Apollo — company enrichment |
+| `ENRICHMENT_PROVIDER` | `profile` (default, free — uses scrape data) or `datalayer` / `apollo` |
+| `ENRICHMENT_API_KEY` | Only for `datalayer` / `apollo` — not needed for `profile` |
 | `GITHUB_SYNC_TOKEN` | Fine-grained PAT with **Actions: Read and write** |
 | `GITHUB_REPO` | e.g. `your-org/lnkr` |
 | `GITHUB_SYNC_SESSION_CONFIGURED` | Set to `true` after cookies are in GitHub Secrets |

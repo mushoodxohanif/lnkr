@@ -39,7 +39,8 @@ Playwright cannot run on Vercel serverless. Configure everything on your deploye
 |----------|------------|
 | `DATABASE_URL` | Postgres connection string (auto-set if you use Neon integration) |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | From [Google AI Studio](https://aistudio.google.com/apikey) |
-| `ENRICHMENT_API_KEY` | From [DataLayer](https://datalayer.sh) or Apollo |
+| `ENRICHMENT_PROVIDER` | Default `profile` — free, uses LinkedIn scrape data (no API key). Or `datalayer` / `apollo` with `ENRICHMENT_API_KEY` |
+| `ENRICHMENT_API_KEY` | Only if using `datalayer` or `apollo` — omit for `profile` |
 | `GITHUB_SYNC_TOKEN` | Fine-grained PAT: repo access + **Actions: Read and write** |
 | `GITHUB_REPO` | e.g. `your-org/lnkr` |
 | `GITHUB_SYNC_SESSION_CONFIGURED` | Set to `true` after Step 3 cookie export |
@@ -248,7 +249,7 @@ bun daily:rank --force
 | `SCRAPE_MIN_DELAY_MS` / `SCRAPE_MAX_DELAY_MS` | `4000` / `10000` | Delay between profile visits |
 | `MAX_POSTS_PER_PROFILE` | `5` | Recent posts read per profile |
 | `TIMEZONE` | `America/New_York` | Daily batch date boundary |
-| `ENRICHMENT_PROVIDER` | `datalayer` | Switch to `apollo` if needed |
+| `ENRICHMENT_PROVIDER` | `profile` | `profile` = free scrape data; `datalayer` or `apollo` need `ENRICHMENT_API_KEY` |
 | `API_KEY` | unset | Protects `/api/*` routes |
 
 For GitHub Actions, mirror scraper tuning vars as **repo Variables** (Settings → Secrets and variables → Actions → Variables): `DAILY_SCRAPE_LIMIT`, `SCRAPE_MIN_DELAY_MS`, `SCRAPE_MAX_DELAY_MS`, `MAX_POSTS_PER_PROFILE`.

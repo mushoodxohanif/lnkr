@@ -1,9 +1,8 @@
 import type { LeadStatus, Prisma } from "@/app/generated/prisma/client";
-import {
-  FINALIZED_LEAD_STATUSES,
-  type FinalizedLeadRow,
-  type FinalizedLeadsFilters,
-  type FinalizedLeadsResult,
+import type {
+  FinalizedLeadRow,
+  FinalizedLeadsFilters,
+  FinalizedLeadsResult,
 } from "@/lib/dashboard/finalized-leads-shared";
 import { db } from "@/lib/db";
 
@@ -19,8 +18,8 @@ export {
 
 function buildWhere(filters: FinalizedLeadsFilters): Prisma.LeadWhereInput {
   const where: Prisma.LeadWhereInput = {
-    status: { in: FINALIZED_LEAD_STATUSES },
-    scores: { some: {} },
+    status: { not: "ARCHIVED" },
+    scrapedAt: { not: null },
   };
 
   if (filters.status && filters.status !== "ALL") {
@@ -145,8 +144,8 @@ export async function getFinalizedLeads(
 export async function getFinalizedLeadListSources(): Promise<string[]> {
   const rows = await db.lead.findMany({
     where: {
-      status: { in: FINALIZED_LEAD_STATUSES },
-      scores: { some: {} },
+      status: { not: "ARCHIVED" },
+      scrapedAt: { not: null },
       snListSource: { not: null },
     },
     select: { snListSource: true },

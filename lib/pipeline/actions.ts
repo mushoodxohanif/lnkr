@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { isContentGenerationConfigured } from "@/lib/agent/config";
 import { runDailyRanker } from "@/lib/agent/daily-ranker";
 import { enrichLeadsBatch, isEnrichmentConfigured } from "@/lib/enrichment";
+import {
+  formatEnrichmentBatchMessage,
+  isEnrichmentBlockingMessage,
+} from "@/lib/enrichment/blocking";
 import { isScoringConfigured, scoreLeadsBatch } from "@/lib/icp";
 import { getPipelineReadiness } from "@/lib/pipeline/readiness";
 import {
@@ -28,6 +32,7 @@ function emptyState(message: string): PipelineActionState {
 function revalidatePipelinePaths() {
   revalidatePath("/");
   revalidatePath("/history");
+  revalidatePath("/leads");
   revalidatePath("/settings/lists");
   revalidatePath("/settings/safety");
 }
@@ -132,9 +137,13 @@ export async function enrichPendingLeads(): Promise<PipelineActionState> {
 
     revalidatePipelinePaths();
 
+    const madeProgress = result.enriched > 0 || result.cached > 0;
+    const blockingOnly =
+      Boolean(result.blockingError) && !madeProgress && result.errors > 0;
+
     return {
-      success: result.errors === 0,
-      message: `Enrichment finished · ${result.enriched} enriched · ${result.cached} cached · ${result.skipped} skipped · ${result.errors} errors`,
+      success: result.errors === 0 || madeProgress || blockingOnly,
+      message: formatEnrichmentBatchMessage(result),
     };
   } catch (error) {
     return emptyState(
@@ -229,32 +238,47 @@ export async function buildDailyBatch(
 export async function runCloudPipeline(): Promise<PipelineActionState> {
   const messages: string[] = [];
   const maxRounds = 50;
+  let enrichmentBypass = false;
 
   for (let round = 0; round < maxRounds; round += 1) {
-    const readiness = await getPipelineReadiness();
+    let readiness = await getPipelineReadiness();
 
     if (readiness.isComplete) {
       break;
     }
 
-    if (readiness.pendingEnrich > 0) {
+    if (readiness.pendingEnrich > 0 && !enrichmentBypass) {
       const previousPending = readiness.pendingEnrich;
       const enrichResult = await enrichPendingLeads();
-      if (!enrichResult.success) {
-        return enrichResult;
-      }
       messages.push(enrichResult.message);
 
-      const afterEnrich = await getPipelineReadiness();
-      if (afterEnrich.pendingEnrich >= previousPending) {
-        messages.push(
-          `Enrichment paused with ${afterEnrich.pendingEnrich} lead${afterEnrich.pendingEnrich === 1 ? "" : "s"} still unenriched.`,
-        );
-        break;
+      if (
+        !enrichResult.success &&
+        !isEnrichmentBlockingMessage(enrichResult.message)
+      ) {
+        return enrichResult;
       }
 
-      continue;
+      readiness = await getPipelineReadiness();
+
+      if (readiness.pendingEnrich >= previousPending) {
+        if (isEnrichmentBlockingMessage(enrichResult.message)) {
+          enrichmentBypass = true;
+          messages.push(
+            "Enrichment unavailable — scoring leads using LinkedIn profile data only.",
+          );
+        } else {
+          messages.push(
+            `Enrichment paused with ${readiness.pendingEnrich} lead${readiness.pendingEnrich === 1 ? "" : "s"} still unenriched.`,
+          );
+          break;
+        }
+      } else {
+        continue;
+      }
     }
+
+    readiness = await getPipelineReadiness();
 
     if (readiness.pendingScore > 0) {
       const previousPending = readiness.pendingScore;
@@ -264,10 +288,10 @@ export async function runCloudPipeline(): Promise<PipelineActionState> {
       }
       messages.push(scoreResult.message);
 
-      const afterScore = await getPipelineReadiness();
-      if (afterScore.pendingScore >= previousPending) {
+      readiness = await getPipelineReadiness();
+      if (readiness.pendingScore >= previousPending) {
         messages.push(
-          `Scoring paused with ${afterScore.pendingScore} lead${afterScore.pendingScore === 1 ? "" : "s"} still unscored.`,
+          `Scoring paused with ${readiness.pendingScore} lead${readiness.pendingScore === 1 ? "" : "s"} still unscored.`,
         );
         break;
       }
@@ -292,6 +316,20 @@ export async function runCloudPipeline(): Promise<PipelineActionState> {
       messages.push(rankResult.message);
       break;
     }
+
+    if (
+      readiness.todayBatchExists &&
+      readiness.qualifiedCount > readiness.todayBatchLeadCount
+    ) {
+      const rankResult = await buildDailyBatch(true);
+      if (!rankResult.success) {
+        return rankResult;
+      }
+      messages.push(rankResult.message);
+      break;
+    }
+
+    break;
   }
 
   const finalReadiness = await getPipelineReadiness();

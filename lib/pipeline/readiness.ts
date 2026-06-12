@@ -1,5 +1,7 @@
 import { getTimezone } from "@/lib/agent/config";
 import { db } from "@/lib/db";
+import { isEnrichmentBlockingMessage } from "@/lib/enrichment/blocking";
+import { getEnrichmentProviderName } from "@/lib/enrichment/config";
 import {
   canRunPlaywrightSync,
   getSyncProvider,
@@ -30,6 +32,8 @@ export type PipelineReadiness = {
   activeLeadCount: number;
   enrichedCount: number;
   scoredCount: number;
+  qualifiedCount: number;
+  enrichmentBlockReason: string | null;
   canSync: boolean;
   willRunSync: boolean;
   willRunEnrich: boolean;
@@ -94,6 +98,43 @@ async function countScoredActiveLeads(): Promise<number> {
       scores: { some: {} },
     },
   });
+}
+
+async function countQualifiedLeads(): Promise<number> {
+  return db.lead.count({
+    where: {
+      status: "QUALIFIED",
+      scrapedAt: { not: null },
+    },
+  });
+}
+
+async function getRecentEnrichmentBlockReason(): Promise<string | null> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const entries = await db.activityLog.findMany({
+    where: {
+      action: "enrich_company_error",
+      createdAt: { gte: since },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+    select: { metadata: true },
+  });
+
+  for (const entry of entries) {
+    const metadata = entry.metadata;
+    if (
+      typeof metadata === "object" &&
+      metadata !== null &&
+      !Array.isArray(metadata) &&
+      typeof metadata.message === "string" &&
+      isEnrichmentBlockingMessage(metadata.message)
+    ) {
+      return metadata.message;
+    }
+  }
+
+  return null;
 }
 
 async function countPendingEnrichActive(): Promise<number> {
@@ -221,6 +262,8 @@ export async function getPipelineReadiness(): Promise<PipelineReadiness> {
     activeLeadCount,
     enrichedCount,
     scoredCount,
+    qualifiedCount,
+    enrichmentBlockReason,
   ] = await Promise.all([
     db.snListConfig.count({ where: { enabled: true } }),
     getTodayScrapeCount(),
@@ -230,6 +273,8 @@ export async function getPipelineReadiness(): Promise<PipelineReadiness> {
     countActiveLeads(),
     countEnrichedActiveLeads(),
     countScoredActiveLeads(),
+    countQualifiedLeads(),
+    getRecentEnrichmentBlockReason(),
   ]);
 
   const todayBatchExists = todayBatch.exists;
@@ -252,9 +297,13 @@ export async function getPipelineReadiness(): Promise<PipelineReadiness> {
     todayBatchExists,
   });
 
-  const willRunEnrich = pendingEnrich > 0;
+  const usingProfileEnrichment = getEnrichmentProviderName() === "profile";
+  const willRunEnrich =
+    pendingEnrich > 0 && (usingProfileEnrichment || !enrichmentBlockReason);
   const willRunScore = pendingScore > 0;
-  const willRunBatch = !todayBatchExists;
+  const willRunBatch =
+    !todayBatchExists ||
+    (qualifiedCount > todayBatchLeadCount && pendingScore === 0);
   const isComplete =
     !willRunSync && !willRunEnrich && !willRunScore && !willRunBatch;
 
@@ -269,6 +318,8 @@ export async function getPipelineReadiness(): Promise<PipelineReadiness> {
     activeLeadCount,
     enrichedCount,
     scoredCount,
+    qualifiedCount,
+    enrichmentBlockReason,
     canSync,
     willRunSync,
     willRunEnrich,

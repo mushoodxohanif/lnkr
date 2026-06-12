@@ -4,7 +4,10 @@ import {
   MAX_LEADS_PER_COMPANY,
 } from "@/lib/agent/config";
 import { db } from "@/lib/db";
-import { isEnrichmentConfigured } from "@/lib/enrichment/config";
+import {
+  getEnrichmentProviderName,
+  isEnrichmentConfigured,
+} from "@/lib/enrichment/config";
 import { isScoringConfigured } from "@/lib/icp/config";
 import {
   getPipelineReadiness,
@@ -25,6 +28,7 @@ export type { PipelineReadiness };
 export type PipelineConfig = {
   browserProfileExists: boolean;
   enrichmentConfigured: boolean;
+  enrichmentProvider: ReturnType<typeof getEnrichmentProviderName>;
   scoringConfigured: boolean;
   contentConfigured: boolean;
   enabledListCount: number;
@@ -57,6 +61,7 @@ export async function getPipelineConfig(): Promise<PipelineConfig> {
       ? safety.browserProfileExists
       : false,
     enrichmentConfigured: isEnrichmentConfigured(),
+    enrichmentProvider: getEnrichmentProviderName(),
     scoringConfigured: isScoringConfigured(),
     contentConfigured: isContentGenerationConfigured(),
     enabledListCount,

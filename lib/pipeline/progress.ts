@@ -145,7 +145,7 @@ function buildEnrichStep(
   config: PipelineConfig,
   readiness: PipelineReadiness,
 ): PipelineStepProgress {
-  const { enrichedCount, activeLeadCount } = readiness;
+  const { enrichedCount, activeLeadCount, enrichmentBlockReason } = readiness;
   const pending = readiness.pendingEnrich;
   const done = enrichedCount;
   const total = Math.max(activeLeadCount, done + pending);
@@ -156,6 +156,18 @@ function buildEnrichStep(
       label: "Enrich leads",
       status: "blocked",
       detail: "Set ENRICHMENT_API_KEY to enable enrichment.",
+      done,
+      total,
+      percent: stepPercent(done, total),
+    };
+  }
+
+  if (enrichmentBlockReason && config.enrichmentProvider !== "profile") {
+    return {
+      id: "enrich",
+      label: "Enrich leads",
+      status: "blocked",
+      detail: `${enrichmentBlockReason} Scoring will use LinkedIn profile data only.`,
       done,
       total,
       percent: stepPercent(done, total),
