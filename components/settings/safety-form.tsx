@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { LocalSyncGuide } from "@/components/dashboard/local-sync-guide";
 import { PipelineActions } from "@/components/dashboard/pipeline-actions";
 import {
   Field,
@@ -116,7 +115,6 @@ export function SafetyForm({
             : "On Vercel, LinkedIn login and sync run on your computer — not in the cloud. Use the commands below with the same DATABASE_URL as production."
         }
       >
-        {!pipelineConfig.playwrightAvailable ? <LocalSyncGuide /> : null}
         <dl className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
             <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">

@@ -1,11 +1,18 @@
 export type DeploymentPlatform = "vercel" | "local";
 
 export function getDeploymentPlatform(): DeploymentPlatform {
-  return process.env.VERCEL === "1" ? "vercel" : "local";
+  if (isVercelDeployment()) {
+    return "vercel";
+  }
+  return "local";
 }
 
 export function isVercelDeployment(): boolean {
-  return getDeploymentPlatform() === "vercel";
+  return (
+    process.env.VERCEL === "1" ||
+    typeof process.env.VERCEL_ENV === "string" ||
+    typeof process.env.VERCEL_URL === "string"
+  );
 }
 
 /** Playwright needs a local Chrome profile — unavailable on Vercel serverless. */

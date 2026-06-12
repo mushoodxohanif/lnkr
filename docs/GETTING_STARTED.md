@@ -92,6 +92,8 @@ Pre-filled examples steer Gemini tone for fitness/wellness outreach. Edit or cle
 2. Copy the URL (`https://www.linkedin.com/sales/lists/people/...`)
 3. **Settings → Lists → Add list** — paste URL, enable sync, save
 
+No LinkedIn sign-in is required on Vercel to save list URLs. LinkedIn login is only needed later on your computer when you run local sync (Step 3).
+
 ---
 
 ## Step 3 — Local LinkedIn sync {#local-sync}
@@ -159,6 +161,7 @@ bun daily:rank --force
 | Symptom | Likely cause | Fix |
 |---------|----------------|-----|
 | Sync button does nothing / error on Vercel | Sync is local-only | Run `bun sn:sync --all` on your computer |
+| "Open LinkedIn login" fails on Vercel | Playwright is local-only | Run `bun sn:sync --login` on your computer — not from the dashboard |
 | Sync: "No leads saved" | Not signed in locally | `bun sn:sync --login` then sync again |
 | Enrich/score fails on Vercel | Missing env vars | Check Vercel → Environment Variables; redeploy |
 | Function timeout on Vercel Hobby | Batch too large | Click steps again (10 leads/run) or use local CLI |

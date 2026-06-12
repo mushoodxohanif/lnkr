@@ -1,17 +1,23 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { MarkdownContent } from "@/components/markdown-content";
+import { getGettingStartedMarkdown } from "@/lib/content/getting-started";
 
 export const metadata: Metadata = {
   title: "Setup guide | lnkr",
   description: "Step-by-step guide to configure lnkr and run your first batch.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function HelpPage() {
-  const path = join(process.cwd(), "docs/GETTING_STARTED.md");
-  const content = await readFile(path, "utf8");
+  let content: string;
+  try {
+    content = await getGettingStartedMarkdown();
+  } catch {
+    notFound();
+  }
 
   return (
     <div className="min-h-dvh bg-zinc-50">

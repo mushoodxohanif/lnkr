@@ -1,14 +1,16 @@
-import {
-  canRunPlaywrightSync,
-  LOCAL_SYNC_COMMANDS,
-} from "@/lib/runtime/deployment";
+import type { DeploymentPlatform } from "@/lib/runtime/deployment";
+import { LOCAL_SYNC_COMMANDS } from "@/lib/runtime/deployment";
 
 type LocalSyncGuideProps = {
   compact?: boolean;
+  deploymentPlatform: DeploymentPlatform;
 };
 
-export function LocalSyncGuide({ compact = false }: LocalSyncGuideProps) {
-  if (canRunPlaywrightSync()) {
+export function LocalSyncGuide({
+  compact = false,
+  deploymentPlatform,
+}: LocalSyncGuideProps) {
+  if (deploymentPlatform !== "vercel") {
     return null;
   }
 
@@ -62,8 +64,10 @@ export function LocalSyncGuide({ compact = false }: LocalSyncGuideProps) {
         </li>
       </ol>
       <p className="mt-3 text-xs text-amber-800">
-        Then return here and run <strong>Enrich</strong>, <strong>Score</strong>
-        , and <strong>Build today&apos;s batch</strong> from the dashboard.
+        You can add Sales Navigator list URLs on Vercel without signing in —
+        only the sync step needs a local LinkedIn session. Then return here and
+        run <strong>Enrich</strong>, <strong>Score</strong>, and{" "}
+        <strong>Build today&apos;s batch</strong> from the dashboard.
       </p>
     </div>
   );

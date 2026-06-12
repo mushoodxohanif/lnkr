@@ -73,8 +73,10 @@ export async function syncEnabledLists(): Promise<PipelineActionState> {
   }
 
   try {
-    const { runSync } = await import("../../packages/sn-scraper/src/sync");
-    const result = await runSync({ syncAll: true, headed: true });
+    const { runPlaywrightSync } = await import(
+      "@/lib/pipeline/playwright-local"
+    );
+    const result = await runPlaywrightSync();
     return formatSyncResult(result);
   } catch (error) {
     const message =
@@ -260,15 +262,17 @@ export async function runFullPipeline(): Promise<PipelineActionState> {
 }
 
 export async function startLinkedInLogin(): Promise<PipelineActionState> {
-  if (!canRunPlaywrightSync()) {
+  if (!canRunPlaywrightSync() || isVercelDeployment()) {
     return emptyState(
       `LinkedIn login must run on your computer: ${LOCAL_SYNC_COMMANDS.envPull} then ${LOCAL_SYNC_COMMANDS.login}`,
     );
   }
 
   try {
-    const { runLoginFlow } = await import("../../packages/sn-scraper/src/sync");
-    const loggedIn = await runLoginFlow(true);
+    const { runPlaywrightLogin } = await import(
+      "@/lib/pipeline/playwright-local"
+    );
+    const loggedIn = await runPlaywrightLogin();
 
     revalidatePath("/settings/safety");
 

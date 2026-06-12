@@ -165,8 +165,8 @@ export function PipelineActions({
   if (variant === "login-only") {
     return (
       <div className="space-y-3">
-        {!config.playwrightAvailable ? (
-          <LocalSyncGuide />
+        {isVercel ? (
+          <LocalSyncGuide deploymentPlatform={config.deploymentPlatform} />
         ) : (
           <ActionButton
             label="Open LinkedIn login"
@@ -196,7 +196,10 @@ export function PipelineActions({
     const syncStep = steps[0];
     return (
       <div className="space-y-3">
-        <LocalSyncGuide compact={isVercel} />
+        <LocalSyncGuide
+          compact={isVercel}
+          deploymentPlatform={config.deploymentPlatform}
+        />
         <SyncProviderHint config={config} />
         {config.playwrightAvailable ? (
           <ActionButton
@@ -236,7 +239,7 @@ export function PipelineActions({
   return (
     <div className="space-y-4">
       {variant === "full" && isVercel ? (
-        <LocalSyncGuide />
+        <LocalSyncGuide deploymentPlatform={config.deploymentPlatform} />
       ) : variant === "full" ? (
         <SyncProviderHint config={config} />
       ) : null}

@@ -43,7 +43,7 @@ export function ListsForm({ lists }: ListsFormProps) {
     <div className="space-y-6">
       <FormSection
         title="Saved Sales Navigator lists"
-        description="Paste a saved people list URL from Sales Navigator. Enable lists you want to sync."
+        description="Paste a saved people list URL from Sales Navigator. No LinkedIn sign-in is required to add lists here — sign in locally only when you run sync."
       >
         {lists.length === 0 ? (
           <p className="text-sm text-zinc-500">
