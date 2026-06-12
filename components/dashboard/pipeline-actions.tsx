@@ -7,6 +7,7 @@ import {
   GitHubSessionSetup,
   LocalSyncGuide,
 } from "@/components/dashboard/local-sync-guide";
+import { PipelineProgressPanel } from "@/components/dashboard/pipeline-progress";
 import {
   buildDailyBatch,
   enrichPendingLeads,
@@ -360,6 +361,7 @@ export function PipelineActions({
   if (variant === "login-only") {
     return (
       <div className="space-y-3">
+        <PipelineProgressPanel config={config} compact polling={pending} />
         <DailyScrapeLimitBanner config={config} />
         {isGitHubSync ? (
           <GitHubSessionSetup />
@@ -387,6 +389,7 @@ export function PipelineActions({
     const syncStep = steps[0];
     return (
       <div className="space-y-3">
+        <PipelineProgressPanel config={config} compact polling={pending} />
         <DailyScrapeLimitBanner config={config} />
         <LocalSyncGuide
           compact={isVercel}
@@ -425,6 +428,7 @@ export function PipelineActions({
   if (variant === "complete-only") {
     return (
       <div className="space-y-3">
+        <PipelineProgressPanel config={config} compact polling={pending} />
         <DailyScrapeLimitBanner config={config} compact />
         <CompletePipelineButton
           config={config}
@@ -456,6 +460,7 @@ export function PipelineActions({
   if (variant === "compact") {
     return (
       <div className="space-y-4">
+        <PipelineProgressPanel config={config} polling={pending} />
         <DailyScrapeLimitBanner config={config} />
         <CompletePipelineButton
           config={config}
@@ -486,6 +491,7 @@ export function PipelineActions({
 
   return (
     <div className="space-y-4">
+      <PipelineProgressPanel config={config} polling={pending} />
       <DailyScrapeLimitBanner config={config} />
       {variant === "full" && isVercel ? (
         <LocalSyncGuide

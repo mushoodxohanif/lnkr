@@ -23,9 +23,13 @@ export type PipelineReadiness = {
   pendingEnrich: number;
   pendingScore: number;
   todayBatchExists: boolean;
+  todayBatchLeadCount: number;
   todayScrapeCount: number;
   remainingScrapesToday: number;
   enabledListCount: number;
+  activeLeadCount: number;
+  enrichedCount: number;
+  scoredCount: number;
   canSync: boolean;
   willRunSync: boolean;
   willRunEnrich: boolean;
@@ -36,12 +40,6 @@ export type PipelineReadiness = {
   isComplete: boolean;
 };
 
-async function countPendingEnrich(): Promise<number> {
-  return db.lead.count({
-    where: { companyEnrichmentId: null },
-  });
-}
-
 async function countPendingScore(): Promise<number> {
   return db.lead.count({
     where: {
@@ -51,13 +49,61 @@ async function countPendingScore(): Promise<number> {
   });
 }
 
-async function hasTodayBatch(): Promise<boolean> {
+async function hasTodayBatch(): Promise<{
+  exists: boolean;
+  leadCount: number;
+}> {
   const batch = await db.dailyBatch.findUnique({
     where: { date: getBatchDate() },
-    select: { id: true },
+    select: {
+      id: true,
+      _count: { select: { leads: true } },
+    },
   });
 
-  return batch !== null;
+  return {
+    exists: batch !== null,
+    leadCount: batch?._count.leads ?? 0,
+  };
+}
+
+async function countActiveLeads(): Promise<number> {
+  return db.lead.count({
+    where: {
+      status: { not: "ARCHIVED" },
+      scrapedAt: { not: null },
+    },
+  });
+}
+
+async function countEnrichedActiveLeads(): Promise<number> {
+  return db.lead.count({
+    where: {
+      status: { not: "ARCHIVED" },
+      scrapedAt: { not: null },
+      companyEnrichmentId: { not: null },
+    },
+  });
+}
+
+async function countScoredActiveLeads(): Promise<number> {
+  return db.lead.count({
+    where: {
+      status: { not: "ARCHIVED" },
+      scrapedAt: { not: null },
+      scores: { some: {} },
+    },
+  });
+}
+
+async function countPendingEnrichActive(): Promise<number> {
+  return db.lead.count({
+    where: {
+      status: { not: "ARCHIVED" },
+      scrapedAt: { not: null },
+      companyEnrichmentId: null,
+    },
+  });
 }
 
 function resolveSyncDecision(input: {
@@ -171,14 +217,23 @@ export async function getPipelineReadiness(): Promise<PipelineReadiness> {
     todayScrapeCount,
     pendingEnrich,
     pendingScore,
-    todayBatchExists,
+    todayBatch,
+    activeLeadCount,
+    enrichedCount,
+    scoredCount,
   ] = await Promise.all([
     db.snListConfig.count({ where: { enabled: true } }),
     getTodayScrapeCount(),
-    countPendingEnrich(),
+    countPendingEnrichActive(),
     countPendingScore(),
     hasTodayBatch(),
+    countActiveLeads(),
+    countEnrichedActiveLeads(),
+    countScoredActiveLeads(),
   ]);
+
+  const todayBatchExists = todayBatch.exists;
+  const todayBatchLeadCount = todayBatch.leadCount;
 
   const remainingScrapesToday = Math.max(
     0,
@@ -207,9 +262,13 @@ export async function getPipelineReadiness(): Promise<PipelineReadiness> {
     pendingEnrich,
     pendingScore,
     todayBatchExists,
+    todayBatchLeadCount,
     todayScrapeCount,
     remainingScrapesToday,
     enabledListCount,
+    activeLeadCount,
+    enrichedCount,
+    scoredCount,
     canSync,
     willRunSync,
     willRunEnrich,
