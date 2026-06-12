@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   Field,
   FormMessage,
@@ -8,8 +8,13 @@ import {
   SubmitButton,
   TextInput,
 } from "@/components/settings/form-primitives";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { deleteSnList, saveSnList, toggleSnList } from "@/lib/settings/actions";
 import type { SnListData } from "@/lib/settings/types";
+import { cn } from "@/lib/utils";
 
 const initialState = { success: false, message: "" };
 
@@ -31,6 +36,7 @@ export function ListsForm({ lists }: ListsFormProps) {
     initialState,
   );
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [enabled, setEnabled] = useState(true);
 
   const editingList = lists.find((list) => list.id === editingId);
   const statusMessage =
@@ -39,6 +45,10 @@ export function ListsForm({ lists }: ListsFormProps) {
     saveState.success || deleteState.success || toggleState.success;
   const anyPending = savePending || deletePending || togglePending;
 
+  useEffect(() => {
+    setEnabled(editingList?.enabled ?? true);
+  }, [editingList]);
+
   return (
     <div className="space-y-6">
       <FormSection
@@ -46,11 +56,11 @@ export function ListsForm({ lists }: ListsFormProps) {
         description="Paste a saved people list URL from Sales Navigator. No LinkedIn sign-in is required to add lists here — sign in locally only when you run sync."
       >
         {lists.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             No lists configured yet. Add your first Sales Navigator list below.
           </p>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200">
+          <ul className="divide-y divide-border rounded-lg border border-border">
             {lists.map((list) => (
               <li
                 key={list.id}
@@ -58,26 +68,27 @@ export function ListsForm({ lists }: ListsFormProps) {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-zinc-900">{list.name}</p>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    <p className="font-medium text-foreground">{list.name}</p>
+                    <Badge
+                      variant="secondary"
+                      className={cn(
                         list.enabled
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-zinc-100 text-zinc-600"
-                      }`}
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                          : undefined,
+                      )}
                     >
                       {list.enabled ? "Enabled" : "Disabled"}
-                    </span>
+                    </Badge>
                   </div>
                   <a
                     href={list.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 block truncate text-sm text-zinc-500 hover:text-zinc-800"
+                    className="mt-1 block truncate text-sm text-muted-foreground hover:text-foreground"
                   >
                     {list.url}
                   </a>
-                  <p className="mt-1 text-xs text-zinc-400">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {list.lastSyncedAt
                       ? `Last synced ${list.lastSyncedAt.toLocaleString()}`
                       : "Never synced"}
@@ -91,30 +102,34 @@ export function ListsForm({ lists }: ListsFormProps) {
                       name="enabled"
                       value={String(!list.enabled)}
                     />
-                    <button
+                    <Button
                       type="submit"
+                      variant="outline"
+                      size="sm"
                       disabled={togglePending}
-                      className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
                     >
                       {list.enabled ? "Disable" : "Enable"}
-                    </button>
+                    </Button>
                   </form>
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setEditingId(list.id)}
-                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
                   >
                     Edit
-                  </button>
+                  </Button>
                   <form action={deleteAction}>
                     <input type="hidden" name="id" value={list.id} />
-                    <button
+                    <Button
                       type="submit"
+                      variant="outline"
+                      size="sm"
                       disabled={deletePending}
-                      className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-50"
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                       Delete
-                    </button>
+                    </Button>
                   </form>
                 </div>
               </li>
@@ -131,6 +146,7 @@ export function ListsForm({ lists }: ListsFormProps) {
           {editingList ? (
             <input type="hidden" name="id" value={editingList.id} />
           ) : null}
+          <input type="hidden" name="enabled" value={String(enabled)} />
           <Field label="List name" hint="Label for your reference only.">
             <TextInput
               name="name"
@@ -152,29 +168,30 @@ export function ListsForm({ lists }: ListsFormProps) {
               required
             />
           </Field>
-          <label className="flex items-center gap-3 text-sm text-zinc-700">
-            <input
-              type="checkbox"
-              name="enabled"
-              value="true"
-              defaultChecked={editingList?.enabled ?? true}
-              className="h-4 w-4 rounded border-zinc-300"
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="list-enabled"
+              checked={enabled}
+              onCheckedChange={(checked) => setEnabled(checked === true)}
             />
-            Enable for sync
-          </label>
+            <Label htmlFor="list-enabled" className="font-normal">
+              Enable for sync
+            </Label>
+          </div>
           <div className="flex items-center gap-3">
             <SubmitButton
               label={editingList ? "Update list" : "Add list"}
               pending={savePending}
             />
             {editingList ? (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => setEditingId(null)}
-                className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
               >
                 Cancel edit
-              </button>
+              </Button>
             ) : null}
           </div>
         </form>
@@ -186,7 +203,7 @@ export function ListsForm({ lists }: ListsFormProps) {
         />
       ) : null}
       {anyPending ? (
-        <p className="text-xs text-zinc-400">Updating lists...</p>
+        <p className="text-xs text-muted-foreground">Updating lists...</p>
       ) : null}
     </div>
   );

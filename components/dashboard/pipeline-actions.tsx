@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDownIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { ApplicationLimits } from "@/components/dashboard/application-limits";
 import { DailyScrapeLimitBanner } from "@/components/dashboard/daily-scrape-limit-banner";
@@ -8,6 +9,14 @@ import {
   LocalSyncGuide,
 } from "@/components/dashboard/local-sync-guide";
 import { PipelineProgressPanel } from "@/components/dashboard/pipeline-progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   buildDailyBatch,
   enrichPendingLeads,
@@ -32,10 +41,12 @@ function SyncProviderHint({ config }: { config: PipelineConfig }) {
     if (config.sessionConfigured) return null;
 
     return (
-      <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-        LinkedIn session cookies are not configured for GitHub sync. Complete
-        session setup in Settings → Safety before syncing.
-      </p>
+      <Alert className="border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <AlertDescription>
+          LinkedIn session cookies are not configured for GitHub sync. Complete
+          session setup in Settings → Safety before syncing.
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -43,11 +54,13 @@ function SyncProviderHint({ config }: { config: PipelineConfig }) {
   if (config.browserProfileExists) return null;
 
   return (
-    <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-      No LinkedIn session saved yet. Run{" "}
-      <code className="font-mono text-xs">{LOCAL_SYNC_COMMANDS.login}</code> on
-      your computer, or use Settings → Safety when running locally.
-    </p>
+    <Alert className="border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+      <AlertDescription>
+        No LinkedIn session saved yet. Run{" "}
+        <code className="font-mono text-xs">{LOCAL_SYNC_COMMANDS.login}</code>{" "}
+        on your computer, or use Settings → Safety when running locally.
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -59,36 +72,39 @@ function PipelineStatusMessage({ status }: { status: PipelineActionState }) {
     const prefix = status.message.slice(0, urlMatch.index).trimEnd();
 
     return (
-      <p
-        className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+      <Alert
+        className="border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
         role="status"
       >
-        {prefix ? `${prefix} ` : null}
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium underline hover:text-emerald-900"
-        >
-          View GitHub Actions run
-        </a>
-        . GitHub sync takes ~10–30 min — run the cloud pipeline when it
-        finishes.
-      </p>
+        <AlertDescription>
+          {prefix ? `${prefix} ` : null}
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline hover:text-foreground"
+          >
+            View GitHub Actions run
+          </a>
+          . GitHub sync takes ~10–30 min — run the cloud pipeline when it
+          finishes.
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <p
-      className={`rounded-lg px-3 py-2 text-sm ${
+    <Alert
+      variant={status.success ? "default" : "destructive"}
+      className={
         status.success
-          ? "bg-emerald-50 text-emerald-800"
-          : "bg-red-50 text-red-800"
-      }`}
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+          : undefined
+      }
       role="status"
     >
-      {status.message}
-    </p>
+      <AlertDescription>{status.message}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -132,26 +148,25 @@ function ActionButton({
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-zinc-900">{label}</p>
+        <p className="text-sm font-medium text-foreground">{label}</p>
         {description ? (
-          <p className="mt-0.5 text-sm text-zinc-600">{description}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         ) : null}
         {disabled && disabledReason ? (
-          <p className="mt-1 text-xs text-amber-700">{disabledReason}</p>
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+            {disabledReason}
+          </p>
         ) : null}
       </div>
-      <button
+      <Button
         type="button"
+        variant={primary ? "default" : "outline"}
         disabled={pending || disabled}
         onClick={onClick}
-        className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
-          primary
-            ? "bg-violet-600 text-white hover:bg-violet-700"
-            : "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50"
-        }`}
+        className="shrink-0"
       >
         {pending ? "Running..." : label}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -194,32 +209,29 @@ function CompletePipelineButton({
     return (
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
         {disabled && disabledReason ? (
-          <p className="text-xs text-amber-700 sm:mr-auto">{disabledReason}</p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 sm:mr-auto">
+            {disabledReason}
+          </p>
         ) : null}
-        <button
-          type="button"
-          disabled={pending || disabled}
-          onClick={onClick}
-          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="button" disabled={pending || disabled} onClick={onClick}>
           {buttonLabel}
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+    <Alert className="border-primary/30 bg-primary/5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-violet-950">
+          <AlertTitle>
             {readiness.isComplete
               ? "Pipeline up to date"
               : "Run complete pipeline"}
-          </p>
-          <p className="mt-0.5 text-sm text-violet-900/90">{description}</p>
+          </AlertTitle>
+          <AlertDescription className="mt-0.5">{description}</AlertDescription>
           {!readiness.isComplete ? (
-            <ul className="mt-2 space-y-0.5 text-xs text-violet-900/80">
+            <ul className="mt-2 space-y-0.5 text-xs opacity-80">
               {readiness.willRunSync ? (
                 <li>• Sync Sales Navigator lists</li>
               ) : null}
@@ -241,19 +253,35 @@ function CompletePipelineButton({
             </ul>
           ) : null}
           {disabled && disabledReason ? (
-            <p className="mt-1 text-xs text-amber-800">{disabledReason}</p>
+            <p className="mt-1 text-xs text-amber-800 dark:text-amber-400">
+              {disabledReason}
+            </p>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
           disabled={pending || disabled}
           onClick={onClick}
-          className="shrink-0 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="shrink-0"
         >
           {buttonLabel}
-        </button>
+        </Button>
       </div>
-    </div>
+    </Alert>
+  );
+}
+
+function ApplicationLimitsCollapsible({ config }: { config: PipelineConfig }) {
+  return (
+    <Collapsible className="rounded-lg border border-border bg-muted/50 px-3 py-2">
+      <CollapsibleTrigger className="group flex w-full items-center justify-between text-xs font-medium text-foreground">
+        Application limits
+        <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2">
+        <ApplicationLimits config={config} compact />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -439,14 +467,7 @@ export function PipelineActions({
           compact
           onClick={() => runStep("complete", runCompletePipeline)}
         />
-        <details className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
-          <summary className="cursor-pointer text-xs font-medium text-zinc-700">
-            Application limits
-          </summary>
-          <div className="mt-2">
-            <ApplicationLimits config={config} compact />
-          </div>
-        </details>
+        <ApplicationLimitsCollapsible config={config} />
         {status ? <PipelineStatusMessage status={status} /> : null}
       </div>
     );
@@ -456,6 +477,27 @@ export function PipelineActions({
     variant === "compact"
       ? steps.slice(2)
       : steps.filter((step) => !step.hidden);
+
+  const stepsCard = (
+    <Card>
+      {visibleSteps.map((step, index) => (
+        <CardContent
+          key={step.id}
+          className={index > 0 ? "border-t border-border pt-4" : undefined}
+        >
+          <ActionButton
+            label={step.label}
+            description={variant === "full" ? step.description : undefined}
+            pending={pending && activeStep === step.id}
+            disabled={step.disabled}
+            disabledReason={step.disabledReason}
+            primary={step.id === "rank"}
+            onClick={() => runStep(step.id, step.action)}
+          />
+        </CardContent>
+      ))}
+    </Card>
+  );
 
   if (variant === "compact") {
     return (
@@ -470,19 +512,7 @@ export function PipelineActions({
           disabledReason={completePipelineDisabledReason}
           onClick={() => runStep("complete", runCompletePipeline)}
         />
-        <div className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white">
-          {visibleSteps.map((step) => (
-            <div key={step.id} className="p-4">
-              <ActionButton
-                label={step.label}
-                pending={pending && activeStep === step.id}
-                disabled={step.disabled}
-                disabledReason={step.disabledReason}
-                onClick={() => runStep(step.id, step.action)}
-              />
-            </div>
-          ))}
-        </div>
+        {stepsCard}
         <PipelineLimitsFooter config={config} />
         {status ? <PipelineStatusMessage status={status} /> : null}
       </div>
@@ -514,26 +544,12 @@ export function PipelineActions({
       )}
 
       {variant === "full" ? (
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Or run steps individually
         </p>
       ) : null}
 
-      <div className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white">
-        {visibleSteps.map((step) => (
-          <div key={step.id} className="p-4">
-            <ActionButton
-              label={step.label}
-              description={step.description}
-              pending={pending && activeStep === step.id}
-              disabled={step.disabled}
-              disabledReason={step.disabledReason}
-              primary={step.id === "rank"}
-              onClick={() => runStep(step.id, step.action)}
-            />
-          </div>
-        ))}
-      </div>
+      {stepsCard}
 
       <PipelineLimitsFooter config={config} />
 

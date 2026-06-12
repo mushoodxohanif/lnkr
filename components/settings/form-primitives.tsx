@@ -2,6 +2,20 @@
 
 import type { ReactNode } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
 export function FormSection({
   title,
   description,
@@ -12,15 +26,13 @@ export function FormSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="mb-5">
-        <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
-        {description ? (
-          <p className="mt-1 text-sm text-zinc-500">{description}</p>
-        ) : null}
-      </div>
-      <div className="space-y-5">{children}</div>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        {description ? <CardDescription>{description}</CardDescription> : null}
+      </CardHeader>
+      <CardContent className="space-y-5">{children}</CardContent>
+    </Card>
   );
 }
 
@@ -34,34 +46,26 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="block space-y-2">
-      <span className="text-sm font-medium text-zinc-800">{label}</span>
+    <div className="space-y-2">
+      <Label>{label}</Label>
       {children}
-      {hint ? (
-        <span className="block text-xs text-zinc-500">{hint}</span>
-      ) : null}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
 
-export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={`w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 ${props.className ?? ""}`}
-    />
-  );
+export function TextInput({
+  className,
+  ...props
+}: React.ComponentProps<typeof Input>) {
+  return <Input className={cn(className)} {...props} />;
 }
 
-export function TextArea(
-  props: React.TextareaHTMLAttributes<HTMLTextAreaElement>,
-) {
-  return (
-    <textarea
-      {...props}
-      className={`w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 ${props.className ?? ""}`}
-    />
-  );
+export function TextArea({
+  className,
+  ...props
+}: React.ComponentProps<typeof Textarea>) {
+  return <Textarea className={cn(className)} {...props} />;
 }
 
 export function SubmitButton({
@@ -72,13 +76,9 @@ export function SubmitButton({
   pending: boolean;
 }) {
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-    >
+    <Button type="submit" disabled={pending}>
       {pending ? "Saving..." : label}
-    </button>
+    </Button>
   );
 }
 
@@ -90,15 +90,22 @@ export function FormMessage({
   if (!state.message) return null;
 
   return (
-    <p
-      className={`rounded-lg px-3 py-2 text-sm ${
-        state.success
-          ? "bg-emerald-50 text-emerald-800"
-          : "bg-red-50 text-red-800"
-      }`}
+    <Alert
+      variant={state.success ? "default" : "destructive"}
+      className={cn(
+        state.success &&
+          "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+      )}
       role="status"
     >
-      {state.message}
-    </p>
+      <AlertDescription
+        className={cn(
+          state.success &&
+            "text-emerald-800 dark:text-emerald-200 [&_p]:text-emerald-800 dark:[&_p]:text-emerald-200",
+        )}
+      >
+        {state.message}
+      </AlertDescription>
+    </Alert>
   );
 }

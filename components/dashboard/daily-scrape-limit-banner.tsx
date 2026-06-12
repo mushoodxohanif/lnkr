@@ -1,3 +1,14 @@
+"use client";
+
+import { ChevronDownIcon } from "lucide-react";
+import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Progress } from "@/components/ui/progress";
 import {
   getScrapeLimitEfficiencyTips,
   getScrapeLimitHeadline,
@@ -5,6 +16,7 @@ import {
   getScrapeLimitSummary,
 } from "@/lib/pipeline/scrape-limit-guidance";
 import type { PipelineConfig } from "@/lib/pipeline/status";
+import { cn } from "@/lib/utils";
 
 type DailyScrapeLimitBannerProps = {
   config: PipelineConfig;
@@ -12,27 +24,30 @@ type DailyScrapeLimitBannerProps = {
 };
 
 function statusStyles(status: ReturnType<typeof getScrapeLimitStatus>): {
-  container: string;
-  bar: string;
+  alert: string;
+  progress: string;
   label: string;
 } {
   switch (status) {
     case "exhausted":
       return {
-        container: "border-amber-300 bg-amber-50 text-amber-950",
-        bar: "bg-amber-500",
+        alert:
+          "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200",
+        progress: "[&_[data-slot=progress-indicator]]:bg-amber-500",
         label: "Limit reached",
       };
     case "low":
       return {
-        container: "border-orange-200 bg-orange-50 text-orange-950",
-        bar: "bg-orange-500",
+        alert:
+          "border-orange-200 bg-orange-50 text-orange-950 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-200",
+        progress: "[&_[data-slot=progress-indicator]]:bg-orange-500",
         label: "Running low",
       };
     default:
       return {
-        container: "border-emerald-200 bg-emerald-50 text-emerald-950",
-        bar: "bg-emerald-500",
+        alert:
+          "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+        progress: "[&_[data-slot=progress-indicator]]:bg-emerald-500",
         label: "Scrapes available",
       };
   }
@@ -51,64 +66,63 @@ export function DailyScrapeLimitBanner({
     ),
   );
   const tips = getScrapeLimitEfficiencyTips(config);
+  const [tipsOpen, setTipsOpen] = useState(false);
 
   if (compact) {
     return (
-      <div
-        className={`rounded-lg border px-3 py-2 text-sm ${styles.container}`}
-      >
-        <p className="font-medium">{getScrapeLimitHeadline(config)}</p>
-        <p className="mt-1 text-xs leading-5 opacity-90">
+      <Alert className={styles.alert}>
+        <AlertTitle>{getScrapeLimitHeadline(config)}</AlertTitle>
+        <AlertDescription className="text-xs leading-5 opacity-90">
           {getScrapeLimitSummary(config)}
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className={`rounded-xl border px-4 py-3 ${styles.container}`}>
+    <Alert className={styles.alert}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
             Daily SN scrape limit · {styles.label}
           </p>
-          <p className="mt-1 text-sm font-semibold">
+          <AlertTitle className="mt-1">
             {getScrapeLimitHeadline(config)}
-          </p>
+          </AlertTitle>
         </div>
         <p className="text-sm tabular-nums font-medium">
           {config.remainingScrapesToday} left
         </p>
       </div>
 
-      <div
-        className="mt-3 h-2 overflow-hidden rounded-full bg-white/60"
-        role="progressbar"
-        aria-valuenow={config.todayScrapeCount}
-        aria-valuemin={0}
-        aria-valuemax={config.dailyScrapeLimit}
+      <Progress
+        value={usedPercent}
+        className={cn("mt-3 h-2 bg-background/60", styles.progress)}
         aria-label="Daily profile scrape usage"
-      >
-        <div
-          className={`h-full rounded-full transition-all ${styles.bar}`}
-          style={{ width: `${usedPercent}%` }}
-        />
-      </div>
+      />
 
-      <p className="mt-3 text-sm leading-6 opacity-90">
+      <AlertDescription className="mt-3 leading-6 opacity-90">
         {getScrapeLimitSummary(config)}
-      </p>
+      </AlertDescription>
 
-      <details className="mt-3">
-        <summary className="cursor-pointer text-sm font-medium underline decoration-dotted underline-offset-2">
+      <Collapsible open={tipsOpen} onOpenChange={setTipsOpen} className="mt-3">
+        <CollapsibleTrigger className="flex items-center gap-1 text-sm font-medium underline decoration-dotted underline-offset-2">
           How to use today&apos;s limit efficiently
-        </summary>
-        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6 opacity-90">
-          {tips.map((tip) => (
-            <li key={tip}>{tip}</li>
-          ))}
-        </ul>
-      </details>
-    </div>
+          <ChevronDownIcon
+            className={cn(
+              "size-4 transition-transform",
+              tipsOpen && "rotate-180",
+            )}
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-6 opacity-90">
+            {tips.map((tip) => (
+              <li key={tip}>{tip}</li>
+            ))}
+          </ul>
+        </CollapsibleContent>
+      </Collapsible>
+    </Alert>
   );
 }

@@ -1,4 +1,12 @@
+"use client";
+
+import { ChevronDownIcon } from "lucide-react";
 import { DailyScrapeLimitBanner } from "@/components/dashboard/daily-scrape-limit-banner";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { getScrapeLimitStatus } from "@/lib/pipeline/scrape-limit-guidance";
 import type { PipelineConfig } from "@/lib/pipeline/status";
 
@@ -96,10 +104,10 @@ export function ApplicationLimits({
 
   if (compact) {
     return (
-      <ul className="space-y-1.5 text-xs leading-5 text-zinc-600">
+      <ul className="space-y-1.5 text-xs leading-5 text-muted-foreground">
         {rows.map((row) => (
           <li key={row.label}>
-            <span className="font-medium text-zinc-700">{row.label}:</span>{" "}
+            <span className="font-medium text-foreground">{row.label}:</span>{" "}
             {row.value}
           </li>
         ))}
@@ -110,32 +118,35 @@ export function ApplicationLimits({
   return (
     <div className="space-y-3">
       {showDailyBanner ? <DailyScrapeLimitBanner config={config} /> : null}
-      <details
-        className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3"
-        open={defaultOpen}
+      <Collapsible
+        defaultOpen={defaultOpen}
+        className="rounded-lg border border-border bg-muted/50 px-4 py-3"
       >
-        <summary className="cursor-pointer text-sm font-medium text-zinc-900">
+        <CollapsibleTrigger className="group flex w-full items-center justify-between text-sm font-medium text-foreground">
           Application limits
-        </summary>
-        <dl className="mt-3 space-y-3">
-          {rows.map((row) => (
-            <div key={row.label}>
-              <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                {row.label}
-              </dt>
-              <dd className="mt-0.5 text-sm leading-6 text-zinc-700">
-                {row.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <p className="mt-3 text-xs leading-5 text-zinc-500">
-          Scraper tuning (daily scrape cap, delays) is configured via
-          environment variables — see Settings → Safety. Scraping Sales
-          Navigator may violate LinkedIn&apos;s Terms of Service; use
-          conservative limits.
-        </p>
-      </details>
+          <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <dl className="mt-3 space-y-3">
+            {rows.map((row) => (
+              <div key={row.label}>
+                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {row.label}
+                </dt>
+                <dd className="mt-0.5 text-sm leading-6 text-foreground">
+                  {row.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            Scraper tuning (daily scrape cap, delays) is configured via
+            environment variables — see Settings → Safety. Scraping Sales
+            Navigator may violate LinkedIn&apos;s Terms of Service; use
+            conservative limits.
+          </p>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { LeadStatus } from "@/app/generated/prisma/client";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { Button } from "@/components/ui/button";
 import { markLeadSent, skipLead, snoozeLead } from "@/lib/dashboard/actions";
 
 type LeadActionsProps = {
@@ -36,7 +37,7 @@ export function LeadActions({
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge status={status} />
         {message ? (
-          <span className="text-xs text-zinc-500" role="status">
+          <span className="text-xs text-muted-foreground" role="status">
             {message}
           </span>
         ) : null}
@@ -44,40 +45,40 @@ export function LeadActions({
     );
   }
 
-  const buttonClass = compact
-    ? "rounded-lg px-2.5 py-1 text-xs"
-    : "rounded-lg px-3 py-1.5 text-sm";
+  const size = compact ? ("xs" as const) : ("sm" as const);
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
-        <button
+        <Button
           type="button"
+          size={size}
           disabled={pending}
           onClick={() => runAction(() => markLeadSent(leadId))}
-          className={`${buttonClass} font-medium bg-violet-600 text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60`}
         >
           Mark as sent
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
+          size={size}
           disabled={pending}
           onClick={() => runAction(() => skipLead(leadId))}
-          className={`${buttonClass} font-medium border border-zinc-300 bg-white text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60`}
         >
           Skip
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
+          size={size}
           disabled={pending}
           onClick={() => runAction(() => snoozeLead(leadId))}
-          className={`${buttonClass} font-medium border border-zinc-300 bg-white text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60`}
         >
           Snooze 7d
-        </button>
+        </Button>
       </div>
       {message ? (
-        <p className="text-xs text-zinc-500" role="status">
+        <p className="text-xs text-muted-foreground" role="status">
           {message}
         </p>
       ) : null}

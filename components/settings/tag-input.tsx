@@ -1,7 +1,12 @@
 "use client";
 
+import { XIcon } from "lucide-react";
 import { useState } from "react";
+
 import { TextInput } from "@/components/settings/form-primitives";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 type TagInputProps = {
   label: string;
@@ -54,31 +59,32 @@ export function TagInput({
     addValues(text.split(/[,\n]+/));
   }
 
-  function removeValue(index: number) {
-    onChange(values.filter((_, itemIndex) => itemIndex !== index));
+  function removeValue(valueToRemove: string) {
+    onChange(values.filter((value) => value !== valueToRemove));
   }
 
   return (
     <div className="space-y-2">
-      <span className="text-sm font-medium text-zinc-800">{label}</span>
-      <div className="flex flex-wrap gap-2">
-        {values.map((value) => (
-          <span
-            key={value}
-            className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-sm text-zinc-800"
-          >
-            {value}
-            <button
-              type="button"
-              onClick={() => removeValue(values.indexOf(value))}
-              className="rounded-full px-1 text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800"
-              aria-label={`Remove ${value}`}
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
+      <Label>{label}</Label>
+      {values.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {values.map((value) => (
+            <Badge key={value} variant="secondary">
+              {value}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => removeValue(value)}
+                aria-label={`Remove ${value}`}
+                className="size-4 rounded-full hover:bg-muted"
+              >
+                <XIcon />
+              </Button>
+            </Badge>
+          ))}
+        </div>
+      ) : null}
       <TextInput
         value={draft}
         placeholder={placeholder}
@@ -92,9 +98,7 @@ export function TagInput({
         onPaste={handlePaste}
         onBlur={() => addValue(draft)}
       />
-      {hint ? (
-        <span className="block text-xs text-zinc-500">{hint}</span>
-      ) : null}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }

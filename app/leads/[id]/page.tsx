@@ -7,6 +7,16 @@ import { FitBadge } from "@/components/dashboard/fit-badge";
 import { LeadActions } from "@/components/dashboard/lead-actions";
 import { LeadNotesField } from "@/components/dashboard/lead-notes-field";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { getLeadDetail } from "@/lib/dashboard/queries";
 
 type LeadDetailPageProps = {
@@ -37,260 +47,268 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
       title={lead.name}
       description={[lead.title, lead.company].filter(Boolean).join(" at ")}
       headerExtra={
-        <Link
-          href="/leads"
-          className="text-sm font-medium text-zinc-500 transition hover:text-zinc-800"
-        >
-          ← All leads
-        </Link>
+        <Button variant="link" size="sm" asChild className="h-auto p-0">
+          <Link href="/leads">← All leads</Link>
+        </Button>
       }
     >
       <div className="space-y-6">
-        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                {lead.rank > 0 ? (
-                  <span className="text-sm font-medium text-zinc-400">
-                    Rank #{lead.rank}
-                  </span>
+        <Card className="shadow-sm">
+          <CardContent className="pt-(--card-spacing)">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {lead.rank > 0 ? (
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Rank #{lead.rank}
+                    </span>
+                  ) : null}
+                  <StatusBadge status={lead.status} />
+                </div>
+                {lead.headline ? (
+                  <p className="text-sm text-muted-foreground">
+                    {lead.headline}
+                  </p>
                 ) : null}
-                <StatusBadge status={lead.status} />
-              </div>
-              {lead.headline ? (
-                <p className="text-sm text-zinc-600">{lead.headline}</p>
-              ) : null}
-              {lead.location ? (
-                <p className="text-sm text-zinc-500">{lead.location}</p>
-              ) : null}
-              <div className="flex flex-wrap gap-3 pt-1">
-                <a
-                  href={lead.linkedInUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-violet-600 transition hover:text-violet-800"
-                >
-                  Open LinkedIn profile ↗
-                </a>
-                {lead.snListSource ? (
-                  <span className="text-sm text-zinc-400">
-                    Source: {lead.snListSource}
-                  </span>
+                {lead.location ? (
+                  <p className="text-sm text-muted-foreground">
+                    {lead.location}
+                  </p>
                 ) : null}
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <a
+                    href={lead.linkedInUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-primary transition hover:text-primary/80"
+                  >
+                    Open LinkedIn profile ↗
+                  </a>
+                  {lead.snListSource ? (
+                    <span className="text-sm text-muted-foreground">
+                      Source: {lead.snListSource}
+                    </span>
+                  ) : null}
+                </div>
               </div>
+              {score ? (
+                <FitBadge
+                  fitPercent={score.fitPercent}
+                  timingSignal={score.timingSignal}
+                />
+              ) : null}
             </div>
-            {score ? (
-              <FitBadge
-                fitPercent={score.fitPercent}
-                timingSignal={score.timingSignal}
-              />
-            ) : null}
-          </div>
 
-          <div className="mt-6 border-t border-zinc-100 pt-6">
+            <Separator className="my-6" />
             <LeadActions leadId={lead.id} status={lead.status} />
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-zinc-900">Your notes</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Private notes for your team — not sent to LinkedIn.
-          </p>
-          <div className="mt-4">
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>Your notes</CardTitle>
+            <CardDescription>
+              Private notes for your team — not sent to LinkedIn.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <LeadNotesField leadId={lead.id} initialNotes={lead.notes} />
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
         {score ? (
-          <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-zinc-900">ICP score</h2>
-            <div className="mt-5 grid gap-6 lg:grid-cols-2">
-              <div className="space-y-5">
-                {score.fitReasons.length > 0 ? (
-                  <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      Fit reasons
-                    </h3>
-                    <ul className="space-y-2 text-sm text-zinc-700">
-                      {score.fitReasons.map((reason) => (
-                        <li key={reason} className="flex gap-2">
-                          <span className="text-emerald-500">•</span>
-                          <span>{reason}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>ICP score</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-5">
+                  {score.fitReasons.length > 0 ? (
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Fit reasons
+                      </h3>
+                      <ul className="space-y-2 text-sm text-foreground">
+                        {score.fitReasons.map((reason) => (
+                          <li key={reason} className="flex gap-2">
+                            <span className="text-emerald-500">•</span>
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
 
-                {score.painPoints.length > 0 ? (
-                  <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      Pain points
-                    </h3>
-                    <ul className="space-y-2 text-sm text-zinc-700">
-                      {score.painPoints.map((point) => (
-                        <li key={point} className="flex gap-2">
-                          <span className="text-amber-500">•</span>
-                          <span>{point}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+                  {score.painPoints.length > 0 ? (
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Pain points
+                      </h3>
+                      <ul className="space-y-2 text-sm text-foreground">
+                        {score.painPoints.map((point) => (
+                          <li key={point} className="flex gap-2">
+                            <span className="text-amber-500">•</span>
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
 
-                {score.disqualifiers.length > 0 ? (
-                  <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      Disqualifiers
-                    </h3>
-                    <ul className="space-y-2 text-sm text-zinc-600">
-                      {score.disqualifiers.map((item) => (
-                        <li key={item} className="flex gap-2">
-                          <span className="text-red-400">•</span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+                  {score.disqualifiers.length > 0 ? (
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Disqualifiers
+                      </h3>
+                      <ul className="space-y-2 text-sm text-muted-foreground">
+                        {score.disqualifiers.map((item) => (
+                          <li key={item} className="flex gap-2">
+                            <span className="text-destructive">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
 
-                {score.recommendedOffer ? (
+                  {score.recommendedOffer ? (
+                    <div>
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Recommended offer
+                      </h3>
+                      <p className="text-sm leading-6 text-foreground">
+                        {score.recommendedOffer}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+
+                {Object.keys(score.dimensionScores).length > 0 ? (
                   <div>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      Recommended offer
+                    <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Dimension breakdown
                     </h3>
-                    <p className="text-sm leading-6 text-zinc-700">
-                      {score.recommendedOffer}
-                    </p>
+                    <dl className="space-y-3">
+                      {Object.entries(score.dimensionScores).map(
+                        ([key, value]) => (
+                          <div key={key} className="flex items-center gap-3">
+                            <dt className="w-28 shrink-0 text-sm text-muted-foreground">
+                              {formatDimensionLabel(key)}
+                            </dt>
+                            <dd className="flex flex-1 items-center gap-2">
+                              <Progress
+                                value={Math.min(100, Math.max(0, value))}
+                                className="h-2 flex-1"
+                              />
+                              <span className="w-10 text-right text-sm tabular-nums text-foreground">
+                                {Math.round(value)}
+                              </span>
+                            </dd>
+                          </div>
+                        ),
+                      )}
+                    </dl>
                   </div>
                 ) : null}
               </div>
-
-              {Object.keys(score.dimensionScores).length > 0 ? (
-                <div>
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Dimension breakdown
-                  </h3>
-                  <dl className="space-y-3">
-                    {Object.entries(score.dimensionScores).map(
-                      ([key, value]) => (
-                        <div key={key} className="flex items-center gap-3">
-                          <dt className="w-28 shrink-0 text-sm text-zinc-600">
-                            {formatDimensionLabel(key)}
-                          </dt>
-                          <dd className="flex flex-1 items-center gap-2">
-                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-100">
-                              <div
-                                className="h-full rounded-full bg-emerald-500"
-                                style={{
-                                  width: `${Math.min(100, Math.max(0, value))}%`,
-                                }}
-                              />
-                            </div>
-                            <span className="w-10 text-right text-sm tabular-nums text-zinc-700">
-                              {Math.round(value)}
-                            </span>
-                          </dd>
-                        </div>
-                      ),
-                    )}
-                  </dl>
-                </div>
-              ) : null}
-            </div>
-          </section>
+            </CardContent>
+          </Card>
         ) : null}
 
         {enrichment ? (
-          <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-zinc-900">
-              Company enrichment
-            </h2>
-            <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-              {enrichment.companyName ? (
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    Company
-                  </dt>
-                  <dd className="mt-1 text-sm text-zinc-800">
-                    {enrichment.companyName}
-                  </dd>
-                </div>
-              ) : null}
-              {enrichment.domain ? (
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    Domain
-                  </dt>
-                  <dd className="mt-1 text-sm text-zinc-800">
-                    {enrichment.domain}
-                  </dd>
-                </div>
-              ) : null}
-              {enrichment.employeeCount ? (
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    Employees
-                  </dt>
-                  <dd className="mt-1 text-sm text-zinc-800">
-                    {enrichment.employeeCount.toLocaleString()}
-                  </dd>
-                </div>
-              ) : null}
-              {enrichment.industry ? (
-                <div>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    Industry
-                  </dt>
-                  <dd className="mt-1 text-sm text-zinc-800">
-                    {enrichment.industry}
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-          </section>
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Company enrichment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-4 sm:grid-cols-2">
+                {enrichment.companyName ? (
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Company
+                    </dt>
+                    <dd className="mt-1 text-sm text-foreground">
+                      {enrichment.companyName}
+                    </dd>
+                  </div>
+                ) : null}
+                {enrichment.domain ? (
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Domain
+                    </dt>
+                    <dd className="mt-1 text-sm text-foreground">
+                      {enrichment.domain}
+                    </dd>
+                  </div>
+                ) : null}
+                {enrichment.employeeCount ? (
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Employees
+                    </dt>
+                    <dd className="mt-1 text-sm text-foreground">
+                      {enrichment.employeeCount.toLocaleString()}
+                    </dd>
+                  </div>
+                ) : null}
+                {enrichment.industry ? (
+                  <div>
+                    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Industry
+                    </dt>
+                    <dd className="mt-1 text-sm text-foreground">
+                      {enrichment.industry}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </CardContent>
+          </Card>
         ) : null}
 
         {lead.recentPosts.length > 0 ? (
-          <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-zinc-900">
-              Recent LinkedIn posts
-            </h2>
-            <ul className="mt-4 space-y-4">
-              {lead.recentPosts.map((post) => (
-                <li
-                  key={post.text}
-                  className="rounded-lg border border-zinc-100 bg-zinc-50 p-4"
-                >
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-800">
-                    {post.text}
-                  </p>
-                  {post.postedAt ? (
-                    <p className="mt-2 text-xs text-zinc-400">
-                      {post.postedAt}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Recent LinkedIn posts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-4">
+                {lead.recentPosts.map((post) => (
+                  <li
+                    key={post.text}
+                    className="rounded-lg border border-border bg-muted/50 p-4"
+                  >
+                    <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">
+                      {post.text}
                     </p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </section>
+                    {post.postedAt ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {post.postedAt}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         ) : null}
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-zinc-900">
-            Outreach drafts
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Copy these manually — lnkr never posts or connects on your behalf.
-          </p>
-          <div className="mt-5">
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle>Outreach drafts</CardTitle>
+            <CardDescription>
+              Copy these manually — lnkr never posts or connects on your behalf.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <DraftBlock
               warmingComment={lead.content?.warmingComment ?? null}
               connectionNote={lead.content?.connectionNote ?? null}
             />
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
     </DashboardShell>
   );

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { updateLeadNotes } from "@/lib/dashboard/actions";
+import { cn } from "@/lib/utils";
 
 type LeadNotesFieldProps = {
   leadId: string;
@@ -37,7 +39,7 @@ export function LeadNotesField({
 
   return (
     <div className={compact ? "min-w-48" : undefined}>
-      <textarea
+      <Textarea
         value={notes}
         onChange={(event) => setNotes(event.target.value)}
         onBlur={() => {
@@ -47,27 +49,32 @@ export function LeadNotesField({
         }}
         rows={rows}
         placeholder="Add a note…"
-        className={
-          compact
-            ? "w-full resize-y rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-800 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
-            : "w-full resize-y rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-800 placeholder:text-zinc-400 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
-        }
+        className={cn(compact && "text-xs")}
       />
       {status === "saving" ? (
         <p
-          className={`mt-1 ${compact ? "text-[10px]" : "text-xs"} text-zinc-500`}
+          className={cn(
+            "mt-1 text-muted-foreground",
+            compact ? "text-[10px]" : "text-xs",
+          )}
         >
           Saving…
         </p>
       ) : status === "saved" ? (
         <p
-          className={`mt-1 ${compact ? "text-[10px]" : "text-xs"} text-emerald-600`}
+          className={cn(
+            "mt-1 text-emerald-600 dark:text-emerald-400",
+            compact ? "text-[10px]" : "text-xs",
+          )}
         >
           Saved
         </p>
       ) : status === "error" ? (
         <p
-          className={`mt-1 ${compact ? "text-[10px]" : "text-xs"} text-red-600`}
+          className={cn(
+            "mt-1 text-destructive",
+            compact ? "text-[10px]" : "text-xs",
+          )}
         >
           Could not save
         </p>

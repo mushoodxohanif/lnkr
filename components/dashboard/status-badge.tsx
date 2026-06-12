@@ -1,31 +1,30 @@
 import type { LeadStatus } from "@/app/generated/prisma/client";
+import { Badge } from "@/components/ui/badge";
+import { STATUS_LABELS } from "@/lib/dashboard/lead-status";
+import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<LeadStatus, string> = {
-  NEW: "bg-blue-50 text-blue-700",
-  QUALIFIED: "bg-emerald-50 text-emerald-700",
-  ARCHIVED: "bg-zinc-100 text-zinc-600",
-  SENT: "bg-violet-50 text-violet-700",
-  SKIPPED: "bg-zinc-100 text-zinc-500",
-  SNOOZED: "bg-amber-50 text-amber-700",
+  NEW: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
+  QUALIFIED:
+    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  ARCHIVED: "bg-muted text-muted-foreground",
+  SENT: "bg-primary/10 text-primary",
+  SKIPPED: "bg-muted text-muted-foreground",
+  SNOOZED: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
 };
 
-const STATUS_LABELS: Record<LeadStatus, string> = {
-  NEW: "New",
-  QUALIFIED: "Qualified",
-  ARCHIVED: "Archived",
-  SENT: "Sent",
-  SKIPPED: "Skipped",
-  SNOOZED: "Snoozed",
-};
-
-export function StatusBadge({ status }: { status: LeadStatus }) {
-  if (status === "QUALIFIED" || status === "NEW") return null;
+export function StatusBadge({
+  status,
+  alwaysShow = false,
+}: {
+  status: LeadStatus;
+  alwaysShow?: boolean;
+}) {
+  if (!alwaysShow && (status === "QUALIFIED" || status === "NEW")) return null;
 
   return (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
-    >
+    <Badge variant="secondary" className={cn(STATUS_STYLES[status])}>
       {STATUS_LABELS[status]}
-    </span>
+    </Badge>
   );
 }

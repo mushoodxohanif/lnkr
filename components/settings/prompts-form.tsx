@@ -8,6 +8,7 @@ import {
   SubmitButton,
   TextArea,
 } from "@/components/settings/form-primitives";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   PROMPT_TEMPLATE_DESCRIPTIONS,
   PROMPT_TEMPLATE_LABELS,
@@ -29,15 +30,15 @@ export function PromptsForm({ templates }: PromptsFormProps) {
 
   return (
     <form action={formAction} className="space-y-8">
-      <div className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-900">
-        <p className="font-medium">How these work</p>
-        <p className="mt-1 text-violet-800/90">
+      <Alert className="border-primary/20 bg-primary/5">
+        <AlertTitle>How these work</AlertTitle>
+        <AlertDescription>
           Custom instructions are <strong>appended</strong> to the base Gemini
           prompt — they steer tone and focus without replacing core rules. Edit
           the pre-filled examples to match your voice, or clear a field to use
           defaults only.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
 
       {templates.map((template) => (
         <FormSection
@@ -57,7 +58,7 @@ export function PromptsForm({ templates }: PromptsFormProps) {
             />
           </Field>
           {template.updatedAt ? (
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               Last updated {template.updatedAt.toLocaleString()}
             </p>
           ) : null}

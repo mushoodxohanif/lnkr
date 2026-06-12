@@ -3,6 +3,23 @@ import { connection } from "next/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { PipelineActions } from "@/components/dashboard/pipeline-actions";
 import { StatusBadge } from "@/components/dashboard/status-badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getPastBatches } from "@/lib/dashboard/queries";
 import { getPipelineConfig } from "@/lib/pipeline/status";
 
@@ -29,40 +46,42 @@ export default async function HistoryPage() {
       description="Past daily top-50 batches and how many leads you actioned."
     >
       {batches.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-10 text-center">
-          <h2 className="text-lg font-semibold text-zinc-900">
-            No batches yet
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
-            Build your first daily batch after syncing and scoring leads.
-          </p>
-          <div className="mx-auto mt-8 max-w-xl text-left">
-            <PipelineActions config={pipelineConfig} variant="compact" />
-          </div>
-        </div>
+        <Card className="border-dashed shadow-sm">
+          <CardHeader className="text-center">
+            <CardTitle className="text-lg">No batches yet</CardTitle>
+            <CardDescription className="mx-auto max-w-md">
+              Build your first daily batch after syncing and scoring leads.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mx-auto max-w-xl">
+              <PipelineActions config={pipelineConfig} variant="compact" />
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-zinc-200">
-            <thead className="bg-zinc-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <Card className="shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="px-4 text-xs font-semibold uppercase tracking-wide">
                   Date
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-4 text-xs font-semibold uppercase tracking-wide">
                   Leads
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-4 text-xs font-semibold uppercase tracking-wide">
                   Actioned
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-4 text-xs font-semibold uppercase tracking-wide">
                   Progress
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-4 text-right text-xs font-semibold uppercase tracking-wide">
                   View
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {batches.map((batch) => {
                 const progress =
                   batch.leadCount > 0
@@ -70,46 +89,45 @@ export default async function HistoryPage() {
                     : 0;
 
                 return (
-                  <tr key={batch.id} className="hover:bg-zinc-50/80">
-                    <td className="px-4 py-4 text-sm font-medium text-zinc-900">
+                  <TableRow key={batch.id}>
+                    <TableCell className="px-4 py-4 text-sm font-medium">
                       {formatBatchDate(batch.date)}
-                    </td>
-                    <td className="px-4 py-4 text-sm tabular-nums text-zinc-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-4 text-sm tabular-nums text-muted-foreground">
                       {batch.leadCount}
-                    </td>
-                    <td className="px-4 py-4 text-sm tabular-nums text-zinc-600">
+                    </TableCell>
+                    <TableCell className="px-4 py-4 text-sm tabular-nums text-muted-foreground">
                       {batch.actionedCount}
-                    </td>
-                    <td className="px-4 py-4">
+                    </TableCell>
+                    <TableCell className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <div className="h-2 w-24 overflow-hidden rounded-full bg-zinc-100">
-                          <div
-                            className="h-full rounded-full bg-emerald-500"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                        <span className="text-xs tabular-nums text-zinc-500">
+                        <Progress value={progress} className="h-2 w-24" />
+                        <span className="text-xs tabular-nums text-muted-foreground">
                           {progress}%
                         </span>
                         {progress === 100 ? (
                           <StatusBadge status="SENT" />
                         ) : null}
                       </div>
-                    </td>
-                    <td className="px-4 py-4 text-right">
-                      <Link
-                        href={`/history/${batch.date}`}
-                        className="text-sm font-medium text-zinc-700 transition hover:text-zinc-900"
+                    </TableCell>
+                    <TableCell className="px-4 py-4 text-right">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        asChild
+                        className="h-auto p-0"
                       >
-                        Open batch →
-                      </Link>
-                    </td>
-                  </tr>
+                        <Link href={`/history/${batch.date}`}>
+                          Open batch →
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </DashboardShell>
   );

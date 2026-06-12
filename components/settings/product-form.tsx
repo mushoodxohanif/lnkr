@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDownIcon } from "lucide-react";
 import { useActionState, useState } from "react";
 import {
   Field,
@@ -10,6 +11,20 @@ import {
   TextInput,
 } from "@/components/settings/form-primitives";
 import { TagInput } from "@/components/settings/tag-input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { saveUserProfile } from "@/lib/settings/actions";
 import type { CaseStudy, UserProfileData } from "@/lib/settings/types";
 
@@ -52,17 +67,17 @@ export function ProductForm({ initialData }: ProductFormProps) {
     <form action={formAction} className="space-y-6">
       {data.id ? <input type="hidden" name="id" value={data.id} /> : null}
 
-      <div className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-900">
-        <p className="font-medium">Minimum setup</p>
-        <p className="mt-1 text-violet-800/90">
+      <Alert className="border-primary/20 bg-primary/5">
+        <AlertTitle>Minimum setup</AlertTitle>
+        <AlertDescription>
           Product name + at least one value proposition. Industries and personas
           feed ICP scoring when ICP fields are left empty. See the{" "}
-          <a href="/help" className="font-medium underline">
+          <a href="/help" className="font-medium text-foreground underline">
             setup guide
           </a>{" "}
           for a full walkthrough.
-        </p>
-      </div>
+        </AlertDescription>
+      </Alert>
 
       <FormSection
         title="SaaS identity"
@@ -100,19 +115,26 @@ export function ProductForm({ initialData }: ProductFormProps) {
         <ProductTagFields initialData={data} />
       </FormSection>
 
-      <details className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <summary className="cursor-pointer text-base font-semibold text-zinc-900">
-          Optional case studies
-        </summary>
-        <p className="mt-3 text-sm text-zinc-500">
-          Short proof points the agent can reference in drafts. Example entries
-          are pre-filled for this workspace — replace with your real customer
-          stories when you have them.
-        </p>
-        <div className="mt-5">
-          <CaseStudyFields initialStudies={data.caseStudies} />
-        </div>
-      </details>
+      <Collapsible className="rounded-xl border border-border bg-card shadow-sm">
+        <CardHeader className="pb-0">
+          <CollapsibleTrigger className="group flex w-full items-center justify-between text-left">
+            <CardTitle className="text-base">Optional case studies</CardTitle>
+            <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="pt-3">
+            <CardDescription>
+              Short proof points the agent can reference in drafts. Example
+              entries are pre-filled for this workspace — replace with your real
+              customer stories when you have them.
+            </CardDescription>
+            <div className="mt-5">
+              <CaseStudyFields initialStudies={data.caseStudies} />
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
 
       <FormMessage state={state} />
       <SubmitButton label="Save product profile" pending={pending} />
@@ -207,46 +229,47 @@ function CaseStudyFields({ initialStudies }: { initialStudies: CaseStudy[] }) {
       />
       <div className="space-y-4">
         {caseStudies.map((study) => (
-          <div
-            key={study.key}
-            className="rounded-lg border border-zinc-200 p-4 space-y-3"
-          >
-            <Field label="Title">
-              <TextInput
-                value={study.title}
-                onChange={(event) =>
-                  updateStudy(study.key, "title", event.target.value)
-                }
-                placeholder="Series B fintech reduced MTTR by 45%"
-              />
-            </Field>
-            <Field label="Summary">
-              <TextArea
-                value={study.summary}
-                onChange={(event) =>
-                  updateStudy(study.key, "summary", event.target.value)
-                }
-                rows={3}
-                placeholder="What they did, what changed, and the measurable outcome."
-              />
-            </Field>
-            <button
-              type="button"
-              onClick={() => removeStudy(study.key)}
-              className="text-sm font-medium text-red-600 hover:text-red-700"
-            >
-              Remove case study
-            </button>
-          </div>
+          <Card key={study.key} size="sm">
+            <CardContent className="space-y-3">
+              <Field label="Title">
+                <TextInput
+                  value={study.title}
+                  onChange={(event) =>
+                    updateStudy(study.key, "title", event.target.value)
+                  }
+                  placeholder="Series B fintech reduced MTTR by 45%"
+                />
+              </Field>
+              <Field label="Summary">
+                <TextArea
+                  value={study.summary}
+                  onChange={(event) =>
+                    updateStudy(study.key, "summary", event.target.value)
+                  }
+                  rows={3}
+                  placeholder="What they did, what changed, and the measurable outcome."
+                />
+              </Field>
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto p-0 text-destructive"
+                onClick={() => removeStudy(study.key)}
+              >
+                Remove case study
+              </Button>
+            </CardContent>
+          </Card>
         ))}
       </div>
-      <button
+      <Button
         type="button"
+        variant="link"
+        className="mt-2 h-auto p-0"
         onClick={addStudy}
-        className="text-sm font-medium text-zinc-700 hover:text-zinc-900"
       >
         + Add case study
-      </button>
+      </Button>
     </>
   );
 }

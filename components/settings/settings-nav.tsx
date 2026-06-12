@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
 const NAV_ITEMS = [
   { href: "/help", label: "Setup guide" },
   { href: "/settings/product", label: "Product profile" },
@@ -16,23 +19,25 @@ export function SettingsNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="space-y-1">
+    <nav className="flex flex-col gap-1">
       {NAV_ITEMS.map((item) => {
         const isActive = pathname === item.href;
 
         return (
-          <Link
+          <Button
             key={item.href}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-            className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive
-                ? "bg-white text-zinc-900 shadow-sm"
-                : "text-zinc-600 hover:bg-white hover:text-zinc-900"
-            }`}
+            variant="ghost"
+            size="sm"
+            asChild
+            className={cn(
+              "w-full justify-start",
+              isActive && "bg-muted text-foreground",
+            )}
           >
-            {item.label}
-          </Link>
+            <Link href={item.href} aria-current={isActive ? "page" : undefined}>
+              {item.label}
+            </Link>
+          </Button>
         );
       })}
     </nav>

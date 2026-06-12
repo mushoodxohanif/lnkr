@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useActionState } from "react";
 import { ApplicationLimits } from "@/components/dashboard/application-limits";
 import { GitHubSessionSetup } from "@/components/dashboard/local-sync-guide";
@@ -12,10 +13,15 @@ import {
   TextArea,
   TextInput,
 } from "@/components/settings/form-primitives";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import type { ActivityLogEntry } from "@/lib/activity/queries";
 import type { PipelineConfig } from "@/lib/pipeline/status";
 import { addDoNotContact, removeDoNotContact } from "@/lib/settings/actions";
 import type { DoNotContactEntry, SafetyStatusData } from "@/lib/settings/types";
+import { cn } from "@/lib/utils";
 
 const initialState = { success: false, message: "" };
 
@@ -51,6 +57,41 @@ function formatMetadata(metadata: unknown): string | null {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+function StatCard({
+  label,
+  value,
+  hint,
+  className,
+  valueClassName,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  className?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <Card size="sm" className={cn("bg-muted/50", className)}>
+      <CardContent>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </dt>
+        <dd
+          className={cn(
+            "mt-1 text-lg font-semibold text-foreground",
+            valueClassName,
+          )}
+        >
+          {value}
+        </dd>
+        {hint ? (
+          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function SafetyForm({
   safety,
   blocklist,
@@ -71,6 +112,13 @@ export function SafetyForm({
   const isGitHubSync = pipelineConfig.syncProvider === "github";
   const isLocalSync = pipelineConfig.syncProvider === "local";
 
+  const scrapeCardClass =
+    safety.remainingToday <= 0
+      ? "border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50"
+      : safety.remainingToday <= 10
+        ? "border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/50"
+        : undefined;
+
   return (
     <div className="space-y-6">
       <FormSection
@@ -85,46 +133,25 @@ export function SafetyForm({
         description="Live usage against your configured scrape caps. Change limits via Vercel env vars, GitHub Actions Variables, or `.env.local`."
       >
         <dl className="grid gap-4 sm:grid-cols-2">
-          <div
-            className={`rounded-lg border px-4 py-3 ${
+          <StatCard
+            label="Daily scrape limit"
+            value={`${safety.todayScrapeCount} / ${safety.dailyScrapeLimit}`}
+            hint={
               safety.remainingToday <= 0
-                ? "border-amber-300 bg-amber-50"
-                : safety.remainingToday <= 10
-                  ? "border-orange-200 bg-orange-50"
-                  : "border-zinc-200 bg-zinc-50"
-            }`}
-          >
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Daily scrape limit
-            </dt>
-            <dd className="mt-1 text-lg font-semibold text-zinc-900">
-              {safety.todayScrapeCount} / {safety.dailyScrapeLimit}
-            </dd>
-            <p className="mt-1 text-xs text-zinc-600">
-              {safety.remainingToday <= 0
                 ? "Limit reached — sync won't save new profiles until tomorrow"
-                : `${safety.remainingToday} remaining today`}
-            </p>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Profile delay
-            </dt>
-            <dd className="mt-1 text-lg font-semibold text-zinc-900">
-              {safety.minDelayMs / 1000}s–{safety.maxDelayMs / 1000}s
-            </dd>
-            <p className="mt-1 text-xs text-zinc-500">
-              Random delay between profile visits
-            </p>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Posts per profile
-            </dt>
-            <dd className="mt-1 text-lg font-semibold text-zinc-900">
-              {safety.maxPostsPerProfile}
-            </dd>
-          </div>
+                : `${safety.remainingToday} remaining today`
+            }
+            className={scrapeCardClass}
+          />
+          <StatCard
+            label="Profile delay"
+            value={`${safety.minDelayMs / 1000}s–${safety.maxDelayMs / 1000}s`}
+            hint="Random delay between profile visits"
+          />
+          <StatCard
+            label="Posts per profile"
+            value={safety.maxPostsPerProfile}
+          />
         </dl>
       </FormSection>
 
@@ -139,65 +166,62 @@ export function SafetyForm({
         }
       >
         <dl className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              Sync method
-            </dt>
-            <dd className="mt-1 text-lg font-semibold text-zinc-900">
-              {isGitHubSync
+          <StatCard
+            label="Sync method"
+            value={
+              isGitHubSync
                 ? "GitHub Actions"
                 : isLocalSync
                   ? "Playwright (local machine)"
-                  : "Local CLI (fallback)"}
-            </dd>
-            <p className="mt-1 text-xs text-zinc-500">
-              {isGitHubSync
+                  : "Local CLI (fallback)"
+            }
+            hint={
+              isGitHubSync
                 ? "Trigger sync from the dashboard — scraping runs in GitHub Actions."
                 : isLocalSync
                   ? "Sync uses your local browser. Sign in below before your first sync."
-                  : "Configure lists here on Vercel; run sync from your laptop."}
-            </p>
-          </div>
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              LinkedIn session
-            </dt>
-            <dd
-              className={`mt-1 text-lg font-semibold ${
-                (isLocalSync && safety.browserProfileExists) ||
-                (isGitHubSync && pipelineConfig.sessionConfigured)
-                  ? "text-emerald-700"
-                  : "text-amber-700"
-              }`}
-            >
-              {isGitHubSync
+                  : "Configure lists here on Vercel; run sync from your laptop."
+            }
+          />
+          <StatCard
+            label="LinkedIn session"
+            value={
+              isGitHubSync
                 ? pipelineConfig.sessionConfigured
                   ? "Cookies configured"
                   : "Session setup required"
                 : isLocalSync && safety.browserProfileExists
                   ? "Profile saved locally"
-                  : "Sign-in on your computer"}
-            </dd>
-            <p className="mt-1 text-xs text-zinc-500">
-              {isGitHubSync
+                  : "Sign-in on your computer"
+            }
+            valueClassName={
+              (isLocalSync && safety.browserProfileExists) ||
+              (isGitHubSync && pipelineConfig.sessionConfigured)
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-amber-700 dark:text-amber-400"
+            }
+            hint={
+              isGitHubSync
                 ? pipelineConfig.sessionConfigured
                   ? "GitHub Secrets has LinkedIn cookies — ready to sync from the dashboard."
                   : "Admin must export cookies to LINKEDIN_SESSION_COOKIES in GitHub Secrets."
                 : isLocalSync && safety.browserProfileExists
                   ? "Session is on this machine — ready to sync."
-                  : "Run `bun sn:sync --login` locally after `vercel env pull`."}
-            </p>
-          </div>
+                  : "Run `bun sn:sync --login` locally after `vercel env pull`."
+            }
+          />
         </dl>
         {isLocalSync ? (
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-            <p className="text-sm font-medium text-zinc-900">
-              Profile directory
-            </p>
-            <p className="mt-1 font-mono text-xs text-zinc-600">
-              {safety.browserProfileDir}
-            </p>
-          </div>
+          <Card size="sm" className="mt-4 bg-muted/50">
+            <CardContent>
+              <p className="text-sm font-medium text-foreground">
+                Profile directory
+              </p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                {safety.browserProfileDir}
+              </p>
+            </CardContent>
+          </Card>
         ) : null}
         {isGitHubSync ? (
           <GitHubSessionSetup />
@@ -211,22 +235,17 @@ export function SafetyForm({
         description="Blocked leads are skipped during sync. Add LinkedIn profile URLs or emails you never want to outreach."
       >
         {statusMessage ? (
-          <p
-            className={`rounded-lg px-3 py-2 text-sm ${
-              statusSuccess
-                ? "bg-emerald-50 text-emerald-800"
-                : "bg-red-50 text-red-800"
-            }`}
-            role="status"
-          >
-            {statusMessage}
-          </p>
+          <FormMessage
+            state={{ success: statusSuccess, message: statusMessage }}
+          />
         ) : null}
 
         {blocklist.length === 0 ? (
-          <p className="text-sm text-zinc-500">No blocked contacts yet.</p>
+          <p className="text-sm text-muted-foreground">
+            No blocked contacts yet.
+          </p>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200">
+          <ul className="divide-y divide-border rounded-lg border border-border">
             {blocklist.map((entry) => (
               <li
                 key={entry.id}
@@ -238,37 +257,41 @@ export function SafetyForm({
                       href={entry.linkedInUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block truncate text-sm font-medium text-zinc-900 hover:text-zinc-600"
+                      className="block truncate text-sm font-medium text-foreground hover:text-muted-foreground"
                     >
                       {entry.linkedInUrl}
                     </a>
                   ) : null}
                   {entry.email ? (
-                    <p className="text-sm text-zinc-700">{entry.email}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {entry.email}
+                    </p>
                   ) : null}
                   {entry.reason ? (
-                    <p className="mt-1 text-xs text-zinc-500">{entry.reason}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {entry.reason}
+                    </p>
                   ) : null}
                 </div>
                 <form action={removeAction}>
                   <input type="hidden" name="id" value={entry.id} />
-                  <button
+                  <Button
                     type="submit"
+                    variant="link"
+                    size="sm"
                     disabled={removePending}
-                    className="text-sm font-medium text-red-600 hover:text-red-800 disabled:opacity-60"
+                    className="h-auto p-0 text-destructive"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </form>
               </li>
             ))}
           </ul>
         )}
 
-        <form
-          action={addAction}
-          className="space-y-4 border-t border-zinc-100 pt-4"
-        >
+        <form action={addAction} className="space-y-4">
+          <Separator />
           <Field
             label="LinkedIn URL"
             hint="e.g. https://www.linkedin.com/in/username"
@@ -303,30 +326,32 @@ export function SafetyForm({
         description="Recent agent actions — scrapes, scores, content generation, safety stops, and outreach tracking."
       >
         {activityLog.length === 0 ? (
-          <p className="text-sm text-zinc-500">No activity recorded yet.</p>
+          <p className="text-sm text-muted-foreground">
+            No activity recorded yet.
+          </p>
         ) : (
-          <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200">
+          <ul className="divide-y divide-border rounded-lg border border-border">
             {activityLog.map((entry) => {
               const detail = formatMetadata(entry.metadata);
 
               return (
                 <li key={entry.id} className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-zinc-900">
+                    <span className="text-sm font-medium text-foreground">
                       {formatActionLabel(entry.action)}
                     </span>
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">
-                      {entry.entityType}
-                    </span>
+                    <Badge variant="secondary">{entry.entityType}</Badge>
                     <time
-                      className="text-xs text-zinc-400"
+                      className="text-xs text-muted-foreground"
                       dateTime={entry.createdAt.toISOString()}
                     >
                       {entry.createdAt.toLocaleString()}
                     </time>
                   </div>
                   {detail ? (
-                    <p className="mt-1 text-sm text-zinc-600">{detail}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {detail}
+                    </p>
                   ) : null}
                 </li>
               );

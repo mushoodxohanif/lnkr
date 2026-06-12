@@ -3,32 +3,41 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import type { LeadStatus } from "@/app/generated/prisma/client";
 import { LeadNotesField } from "@/components/dashboard/lead-notes-field";
+import { StatusBadge } from "@/components/dashboard/status-badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { exportFinalizedLeadsCsvAction } from "@/lib/dashboard/actions";
 import {
   FINALIZED_LEAD_STATUSES,
   type FinalizedLeadRow,
   type FinalizedLeadsFilters,
 } from "@/lib/dashboard/finalized-leads-shared";
-
-const STATUS_STYLES: Record<LeadStatus, string> = {
-  NEW: "bg-blue-50 text-blue-700",
-  QUALIFIED: "bg-emerald-50 text-emerald-700",
-  ARCHIVED: "bg-zinc-100 text-zinc-600",
-  SENT: "bg-violet-50 text-violet-700",
-  SKIPPED: "bg-zinc-100 text-zinc-500",
-  SNOOZED: "bg-amber-50 text-amber-700",
-};
-
-const STATUS_LABELS: Record<LeadStatus, string> = {
-  NEW: "New",
-  QUALIFIED: "Qualified",
-  ARCHIVED: "Archived",
-  SENT: "Sent",
-  SKIPPED: "Skipped",
-  SNOOZED: "Snoozed",
-};
+import { STATUS_LABELS } from "@/lib/dashboard/lead-status";
 
 function formatDate(value: Date | null): string {
   if (!value) return "—";
@@ -127,173 +136,186 @@ export function FinalizedLeadsPanel({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-48 flex-1 space-y-1">
-            <span className="text-xs font-medium text-zinc-600">Search</span>
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Name, company, title…"
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  applyFilters({ search });
-                }
-              }}
-            />
-          </label>
+      <Card className="shadow-sm">
+        <CardContent className="pt-(--card-spacing)">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-48 flex-1 space-y-1.5">
+              <Label htmlFor="leads-search">Search</Label>
+              <Input
+                id="leads-search"
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Name, company, title…"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    applyFilters({ search });
+                  }
+                }}
+              />
+            </div>
 
-          <label className="space-y-1">
-            <span className="text-xs font-medium text-zinc-600">Status</span>
-            <select
-              defaultValue={filterState.status}
-              className="rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
-              onChange={(event) => applyFilters({ status: event.target.value })}
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select
+                value={filterState.status}
+                onValueChange={(value) => applyFilters({ status: value })}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All statuses</SelectItem>
+                  <SelectItem value="NEW">New (pending score)</SelectItem>
+                  {FINALIZED_LEAD_STATUSES.filter((s) => s !== "NEW").map(
+                    (status) => (
+                      <SelectItem key={status} value={status}>
+                        {STATUS_LABELS[status]}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>SN list</Label>
+              <Select
+                value={filterState.list}
+                onValueChange={(value) => applyFilters({ list: value })}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="All lists" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All lists</SelectItem>
+                  {listSources.map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {source}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-24 space-y-1.5">
+              <Label htmlFor="min-fit">Min fit %</Label>
+              <Input
+                id="min-fit"
+                type="number"
+                min={0}
+                max={100}
+                defaultValue={filterState.minFit}
+                placeholder="0"
+                className="tabular-nums"
+                onBlur={(event) => applyFilters({ minFit: event.target.value })}
+              />
+            </div>
+
+            <div className="w-24 space-y-1.5">
+              <Label htmlFor="max-fit">Max fit %</Label>
+              <Input
+                id="max-fit"
+                type="number"
+                min={0}
+                max={100}
+                defaultValue={filterState.maxFit}
+                placeholder="100"
+                className="tabular-nums"
+                onBlur={(event) => applyFilters({ maxFit: event.target.value })}
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => applyFilters({ search })}
             >
-              <option value="ALL">All statuses</option>
-              <option value="NEW">New (pending score)</option>
-              {FINALIZED_LEAD_STATUSES.filter((s) => s !== "NEW").map(
-                (status) => (
-                  <option key={status} value={status}>
-                    {STATUS_LABELS[status]}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
+              Apply
+            </Button>
 
-          <label className="space-y-1">
-            <span className="text-xs font-medium text-zinc-600">SN list</span>
-            <select
-              defaultValue={filterState.list}
-              className="rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
-              onChange={(event) => applyFilters({ list: event.target.value })}
+            <Button
+              type="button"
+              disabled={exportPending}
+              onClick={handleExport}
             >
-              <option value="ALL">All lists</option>
-              {listSources.map((source) => (
-                <option key={source} value={source}>
-                  {source}
-                </option>
-              ))}
-            </select>
-          </label>
+              {exportPending ? "Exporting…" : "Export CSV"}
+            </Button>
+          </div>
 
-          <label className="w-24 space-y-1">
-            <span className="text-xs font-medium text-zinc-600">Min fit %</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              defaultValue={filterState.minFit}
-              placeholder="0"
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm tabular-nums text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
-              onBlur={(event) => applyFilters({ minFit: event.target.value })}
-            />
-          </label>
+          {exportError ? (
+            <Alert variant="destructive" className="mt-3">
+              <AlertDescription>{exportError}</AlertDescription>
+            </Alert>
+          ) : null}
 
-          <label className="w-24 space-y-1">
-            <span className="text-xs font-medium text-zinc-600">Max fit %</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              defaultValue={filterState.maxFit}
-              placeholder="100"
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm tabular-nums text-zinc-900 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-400"
-              onBlur={(event) => applyFilters({ maxFit: event.target.value })}
-            />
-          </label>
-
-          <button
-            type="button"
-            onClick={() => applyFilters({ search })}
-            className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
-          >
-            Apply
-          </button>
-
-          <button
-            type="button"
-            disabled={exportPending}
-            onClick={handleExport}
-            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {exportPending ? "Exporting…" : "Export CSV"}
-          </button>
-        </div>
-
-        {exportError ? (
-          <p className="mt-3 text-sm text-red-600">{exportError}</p>
-        ) : null}
-
-        <p className="mt-3 text-xs text-zinc-500">
-          {result.total} finalized lead{result.total === 1 ? "" : "s"} · page{" "}
-          {result.page} of {result.totalPages}
-        </p>
-      </div>
+          <CardDescription className="mt-3">
+            {result.total} finalized lead{result.total === 1 ? "" : "s"} · page{" "}
+            {result.page} of {result.totalPages}
+          </CardDescription>
+        </CardContent>
+      </Card>
 
       {result.leads.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-10 text-center">
-          <h2 className="text-lg font-semibold text-zinc-900">
-            No leads match
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-zinc-600">
-            Adjust filters or run the pipeline to sync and score new leads.
-          </p>
-        </div>
+        <Card className="border-dashed shadow-sm">
+          <CardHeader className="text-center">
+            <CardTitle>No leads match</CardTitle>
+            <CardDescription className="mx-auto max-w-md">
+              Adjust filters or run the pipeline to sync and score new leads.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-zinc-200">
-            <thead className="bg-zinc-50">
-              <tr>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <Card className="shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
                   Lead
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
                   Fit
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
                   Status
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
                   List
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
                   Scraped
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                </TableHead>
+                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
                   Notes
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {result.leads.map((lead) => (
-                <tr key={lead.id} className="align-top hover:bg-zinc-50/80">
-                  <td className="px-3 py-3">
+                <TableRow key={lead.id} className="align-top">
+                  <TableCell className="px-3 py-3 whitespace-normal">
                     <Link
                       href={`/leads/${lead.id}`}
-                      className="font-medium text-zinc-900 hover:text-violet-700"
+                      className="font-medium text-foreground hover:text-primary"
                     >
                       {lead.name}
                     </Link>
-                    <p className="mt-0.5 text-xs text-zinc-600">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {[lead.title, lead.company].filter(Boolean).join(" · ") ||
                         "—"}
                     </p>
                     {lead.location ? (
-                      <p className="mt-0.5 text-xs text-zinc-500">
+                      <p className="mt-0.5 text-xs text-muted-foreground">
                         {lead.location}
                       </p>
                     ) : null}
-                  </td>
-                  <td className="px-3 py-3 text-sm tabular-nums text-zinc-700">
+                  </TableCell>
+                  <TableCell className="px-3 py-3 tabular-nums whitespace-normal">
                     {lead.fitPercent !== null ? (
                       <>
                         {Math.round(lead.fitPercent)}%
                         {lead.timingSignal ? (
-                          <span className="mt-0.5 block text-xs text-zinc-500">
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
                             {lead.timingSignal}
                           </span>
                         ) : null}
@@ -301,57 +323,57 @@ export function FinalizedLeadsPanel({
                     ) : (
                       "—"
                     )}
-                  </td>
-                  <td className="px-3 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[lead.status]}`}
-                    >
-                      {STATUS_LABELS[lead.status]}
-                    </span>
-                  </td>
-                  <td className="max-w-32 truncate px-3 py-3 text-xs text-zinc-600">
+                  </TableCell>
+                  <TableCell className="px-3 py-3">
+                    <StatusBadge status={lead.status} alwaysShow />
+                  </TableCell>
+                  <TableCell className="max-w-32 truncate px-3 py-3 text-xs text-muted-foreground">
                     {lead.snListSource ?? "—"}
-                  </td>
-                  <td className="px-3 py-3 text-xs text-zinc-600">
+                  </TableCell>
+                  <TableCell className="px-3 py-3 text-xs text-muted-foreground">
                     {formatDate(lead.scrapedAt)}
-                  </td>
-                  <td className="px-3 py-3">
+                  </TableCell>
+                  <TableCell className="px-3 py-3 whitespace-normal">
                     <LeadNotesField
                       leadId={lead.id}
                       initialNotes={lead.notes}
                       compact
                       rows={2}
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       {result.totalPages > 1 ? (
-        <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-4 py-3">
-          <button
-            type="button"
-            disabled={result.page <= 1}
-            onClick={() => goToPage(result.page - 1)}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="text-sm tabular-nums text-zinc-600">
-            Page {result.page} of {result.totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={result.page >= result.totalPages}
-            onClick={() => goToPage(result.page + 1)}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
+        <Card className="shadow-sm">
+          <CardContent className="flex items-center justify-between py-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={result.page <= 1}
+              onClick={() => goToPage(result.page - 1)}
+            >
+              Previous
+            </Button>
+            <span className="text-sm tabular-nums text-muted-foreground">
+              Page {result.page} of {result.totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={result.page >= result.totalPages}
+              onClick={() => goToPage(result.page + 1)}
+            >
+              Next
+            </Button>
+          </CardContent>
+        </Card>
       ) : null}
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type CopyButtonProps = {
   text: string;
@@ -28,13 +30,15 @@ export function CopyButton({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
+      size="xs"
       onClick={handleCopy}
       disabled={!text.trim()}
-      className={`inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={cn(className)}
     >
       {copied ? "Copied!" : label}
-    </button>
+    </Button>
   );
 }
