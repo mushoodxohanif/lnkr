@@ -47,6 +47,8 @@ model Lead {
   rawProfileSnapshot  Json?
   recentPosts         Json?
   status              LeadStatus         @default(NEW)
+  notes               String?            @db.Text
+  notesUpdatedAt      DateTime?
   scrapedAt           DateTime?
   snoozedUntil        DateTime?
   companyEnrichmentId String?

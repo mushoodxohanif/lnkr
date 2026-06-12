@@ -58,6 +58,7 @@ export type BatchHistorySummary = {
 export type LeadDetailView = LeadSummaryView & {
   snListSource: string | null;
   scrapedAt: Date | null;
+  notes: string | null;
   recentPosts: ScrapedPost[];
   allContent: GeneratedContentView[];
 };

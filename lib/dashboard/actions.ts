@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { logContentActivity } from "@/lib/agent/activity";
+import {
+  exportFinalizedLeadsCsv,
+  type FinalizedLeadsFilters,
+} from "@/lib/dashboard/finalized-leads";
 import { db } from "@/lib/db";
 
 export type LeadActionState = {
@@ -18,6 +22,7 @@ function emptyState(message = ""): LeadActionState {
 function revalidateLeadPaths(leadId: string) {
   revalidatePath("/");
   revalidatePath("/history");
+  revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);
 }
 
@@ -93,4 +98,41 @@ export async function snoozeLead(leadId: string): Promise<LeadActionState> {
       ? `Snoozed for ${SNOOZE_DAYS} days.`
       : result.message,
   };
+}
+
+export async function updateLeadNotes(
+  leadId: string,
+  notes: string,
+): Promise<LeadActionState> {
+  const lead = await db.lead.findUnique({
+    where: { id: leadId },
+    select: { id: true, name: true },
+  });
+
+  if (!lead) {
+    return emptyState("Lead not found.");
+  }
+
+  const trimmed = notes.trim();
+
+  await db.lead.update({
+    where: { id: leadId },
+    data: {
+      notes: trimmed.length > 0 ? trimmed : null,
+      notesUpdatedAt: new Date(),
+    },
+  });
+
+  revalidateLeadPaths(leadId);
+
+  return {
+    success: true,
+    message: trimmed.length > 0 ? "Notes saved." : "Notes cleared.",
+  };
+}
+
+export async function exportFinalizedLeadsCsvAction(
+  filters: FinalizedLeadsFilters,
+): Promise<{ csv: string; filename: string }> {
+  return exportFinalizedLeadsCsv(filters);
 }

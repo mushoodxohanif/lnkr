@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { DraftBlock } from "@/components/dashboard/draft-block";
 import { FitBadge } from "@/components/dashboard/fit-badge";
 import { LeadActions } from "@/components/dashboard/lead-actions";
+import { LeadNotesField } from "@/components/dashboard/lead-notes-field";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { getLeadDetail } from "@/lib/dashboard/queries";
 
@@ -37,10 +38,10 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
       description={[lead.title, lead.company].filter(Boolean).join(" at ")}
       headerExtra={
         <Link
-          href="/"
+          href="/leads"
           className="text-sm font-medium text-zinc-500 transition hover:text-zinc-800"
         >
-          ← Back to top 50
+          ← All leads
         </Link>
       }
     >
@@ -88,6 +89,16 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
 
           <div className="mt-6 border-t border-zinc-100 pt-6">
             <LeadActions leadId={lead.id} status={lead.status} />
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-zinc-900">Your notes</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Private notes for your team — not sent to LinkedIn.
+          </p>
+          <div className="mt-4">
+            <LeadNotesField leadId={lead.id} initialNotes={lead.notes} />
           </div>
         </section>
 

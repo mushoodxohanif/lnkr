@@ -5,6 +5,7 @@ type DashboardShellProps = {
   description?: string;
   children: React.ReactNode;
   headerExtra?: React.ReactNode;
+  wide?: boolean;
 };
 
 export function DashboardShell({
@@ -12,11 +13,16 @@ export function DashboardShell({
   description,
   children,
   headerExtra,
+  wide = false,
 }: DashboardShellProps) {
+  const containerClass = wide ? "max-w-7xl" : "max-w-5xl";
+
   return (
     <div className="flex min-h-dvh flex-col bg-zinc-50">
       <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div
+          className={`mx-auto flex ${containerClass} items-center justify-between px-6 py-4`}
+        >
           <Link
             href="/"
             className="text-lg font-semibold tracking-tight text-zinc-900"
@@ -37,6 +43,12 @@ export function DashboardShell({
               History
             </Link>
             <Link
+              href="/leads"
+              className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900"
+            >
+              All leads
+            </Link>
+            <Link
               href="/settings/product"
               className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900"
             >
@@ -46,7 +58,9 @@ export function DashboardShell({
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-8">
+      <main
+        className={`mx-auto flex w-full ${containerClass} flex-1 flex-col px-6 py-8`}
+      >
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">

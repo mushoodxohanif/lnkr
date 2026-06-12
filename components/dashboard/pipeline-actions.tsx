@@ -172,17 +172,22 @@ function CompletePipelineButton({
   onClick: () => void;
   compact?: boolean;
 }) {
+  const { readiness } = config;
   const isGitHubSync = config.syncProvider === "github";
-  const isLocalSync = config.syncProvider === "local";
-  const scrapeLimitExhausted = config.remainingScrapesToday <= 0;
 
-  const description = scrapeLimitExhausted
-    ? "Daily scrape cap is full — runs enrich, score, and batch on leads already in the database (no new profiles until tomorrow)."
-    : isGitHubSync
-      ? "Starts GitHub sync, then enriches, scores, and builds today's batch. Re-run after sync finishes if you need new leads in the batch."
-      : isLocalSync
-        ? "Syncs Sales Navigator lists, then enriches, scores, and builds today's batch."
-        : "Enriches, scores, and builds today's batch on leads already in the database.";
+  const description = readiness.isComplete
+    ? readiness.statusSummary
+    : readiness.willRunSync && isGitHubSync
+      ? `${readiness.statusSummary} GitHub sync takes ~10–30 min; cloud steps run after sync finishes (click again if needed).`
+      : readiness.statusSummary;
+
+  const buttonLabel = readiness.isComplete
+    ? "Pipeline up to date"
+    : pending && active
+      ? "Running pipeline..."
+      : readiness.willRunSync
+        ? "Run complete pipeline"
+        : "Continue pipeline";
 
   if (compact) {
     return (
@@ -196,7 +201,7 @@ function CompletePipelineButton({
           onClick={onClick}
           className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending && active ? "Running pipeline..." : "Run complete pipeline"}
+          {buttonLabel}
         </button>
       </div>
     );
@@ -207,9 +212,33 @@ function CompletePipelineButton({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-violet-950">
-            Run complete pipeline
+            {readiness.isComplete
+              ? "Pipeline up to date"
+              : "Run complete pipeline"}
           </p>
           <p className="mt-0.5 text-sm text-violet-900/90">{description}</p>
+          {!readiness.isComplete ? (
+            <ul className="mt-2 space-y-0.5 text-xs text-violet-900/80">
+              {readiness.willRunSync ? (
+                <li>• Sync Sales Navigator lists</li>
+              ) : null}
+              {readiness.willRunEnrich ? (
+                <li>
+                  • Enrich {readiness.pendingEnrich} pending lead
+                  {readiness.pendingEnrich === 1 ? "" : "s"}
+                </li>
+              ) : null}
+              {readiness.willRunScore ? (
+                <li>
+                  • Score {readiness.pendingScore} pending lead
+                  {readiness.pendingScore === 1 ? "" : "s"}
+                </li>
+              ) : null}
+              {readiness.willRunBatch ? (
+                <li>• Build today&apos;s top-50 batch</li>
+              ) : null}
+            </ul>
+          ) : null}
           {disabled && disabledReason ? (
             <p className="mt-1 text-xs text-amber-800">{disabledReason}</p>
           ) : null}
@@ -220,7 +249,7 @@ function CompletePipelineButton({
           onClick={onClick}
           className="shrink-0 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending && active ? "Running pipeline..." : "Run complete pipeline"}
+          {buttonLabel}
         </button>
       </div>
     </div>

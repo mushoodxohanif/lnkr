@@ -5,6 +5,7 @@ import { isContentGenerationConfigured } from "@/lib/agent/config";
 import { runDailyRanker } from "@/lib/agent/daily-ranker";
 import { enrichLeadsBatch, isEnrichmentConfigured } from "@/lib/enrichment";
 import { isScoringConfigured, scoreLeadsBatch } from "@/lib/icp";
+import { getPipelineReadiness } from "@/lib/pipeline/readiness";
 import {
   canRunPlaywrightSync,
   envConfigHint,
@@ -13,7 +14,6 @@ import {
   isVercelDeployment,
   LOCAL_SYNC_COMMANDS,
 } from "@/lib/runtime/deployment";
-import { getSafetyConfig, getTodayScrapeCount } from "@/lib/safety/config";
 import type { SyncResult } from "../../packages/sn-scraper/src/types";
 
 export type PipelineActionState = {
@@ -227,27 +227,106 @@ export async function buildDailyBatch(
 }
 
 export async function runCloudPipeline(): Promise<PipelineActionState> {
-  const enrichResult = await enrichPendingLeads();
-  if (!enrichResult.success) {
-    return enrichResult;
+  const messages: string[] = [];
+  const maxRounds = 50;
+
+  for (let round = 0; round < maxRounds; round += 1) {
+    const readiness = await getPipelineReadiness();
+
+    if (readiness.isComplete) {
+      break;
+    }
+
+    if (readiness.pendingEnrich > 0) {
+      const previousPending = readiness.pendingEnrich;
+      const enrichResult = await enrichPendingLeads();
+      if (!enrichResult.success) {
+        return enrichResult;
+      }
+      messages.push(enrichResult.message);
+
+      const afterEnrich = await getPipelineReadiness();
+      if (afterEnrich.pendingEnrich >= previousPending) {
+        messages.push(
+          `Enrichment paused with ${afterEnrich.pendingEnrich} lead${afterEnrich.pendingEnrich === 1 ? "" : "s"} still unenriched.`,
+        );
+        break;
+      }
+
+      continue;
+    }
+
+    if (readiness.pendingScore > 0) {
+      const previousPending = readiness.pendingScore;
+      const scoreResult = await scorePendingLeads();
+      if (!scoreResult.success) {
+        return scoreResult;
+      }
+      messages.push(scoreResult.message);
+
+      const afterScore = await getPipelineReadiness();
+      if (afterScore.pendingScore >= previousPending) {
+        messages.push(
+          `Scoring paused with ${afterScore.pendingScore} lead${afterScore.pendingScore === 1 ? "" : "s"} still unscored.`,
+        );
+        break;
+      }
+
+      continue;
+    }
+
+    if (!readiness.todayBatchExists) {
+      const rankResult = await buildDailyBatch(false);
+      if (
+        !rankResult.success &&
+        rankResult.message.includes("already exists")
+      ) {
+        messages.push("Today's batch was already built.");
+        break;
+      }
+
+      if (!rankResult.success) {
+        return rankResult;
+      }
+
+      messages.push(rankResult.message);
+      break;
+    }
   }
 
-  const scoreResult = await scorePendingLeads();
-  if (!scoreResult.success) {
-    return scoreResult;
+  const finalReadiness = await getPipelineReadiness();
+  if (messages.length === 0) {
+    if (finalReadiness.isComplete) {
+      return {
+        success: true,
+        message: finalReadiness.statusSummary,
+      };
+    }
+
+    return emptyState("No cloud pipeline steps were run.");
   }
 
-  const rankResult = await buildDailyBatch(false);
-  if (!rankResult.success && rankResult.message.includes("already exists")) {
+  if (finalReadiness.isComplete) {
     return {
       success: true,
-      message: `Cloud pipeline finished. ${enrichResult.message} ${scoreResult.message} Today's batch was already built.`,
+      message: `${messages.join(" ")} ${finalReadiness.statusSummary}`,
     };
   }
 
+  const remaining: string[] = [];
+  if (finalReadiness.pendingEnrich > 0) {
+    remaining.push(`${finalReadiness.pendingEnrich} still need enrichment`);
+  }
+  if (finalReadiness.pendingScore > 0) {
+    remaining.push(`${finalReadiness.pendingScore} still need scoring`);
+  }
+  if (!finalReadiness.todayBatchExists) {
+    remaining.push("today's batch not built yet");
+  }
+
   return {
-    success: rankResult.success,
-    message: `${enrichResult.message} ${scoreResult.message} ${rankResult.message}`,
+    success: true,
+    message: `${messages.join(" ")} Partial run — ${remaining.join(", ")}. Click again to continue.`,
   };
 }
 
@@ -270,32 +349,43 @@ function shouldContinueAfterSync(
   return false;
 }
 
-/** Sync (when available) + enrich + score + build batch in one action. */
+/** Sync (when needed) + enrich + score + build batch in one action. */
 export async function runCompletePipeline(): Promise<PipelineActionState> {
   const messages: string[] = [];
-  const canSyncLocal = canRunPlaywrightSync();
-  const canSyncGitHub = isGitHubSyncConfigured();
-  const safety = getSafetyConfig();
-  const todayScrapeCount = await getTodayScrapeCount();
-  const remainingScrapes = Math.max(
-    0,
-    safety.dailyScrapeLimit - todayScrapeCount,
-  );
+  const readiness = await getPipelineReadiness();
 
-  if (canSyncLocal || canSyncGitHub) {
-    if (remainingScrapes <= 0) {
-      messages.push(
-        `Daily scrape limit reached (${todayScrapeCount}/${safety.dailyScrapeLimit} today) — skipped sync, running cloud pipeline on existing leads.`,
-      );
-    } else {
-      const syncResult = await syncEnabledLists();
+  if (readiness.isComplete) {
+    return {
+      success: true,
+      message: readiness.statusSummary,
+    };
+  }
 
-      if (!shouldContinueAfterSync(syncResult, canSyncGitHub)) {
-        return syncResult;
-      }
+  if (readiness.willRunSync) {
+    const syncResult = await syncEnabledLists();
+    const canSyncGitHub = isGitHubSyncConfigured();
 
-      messages.push(syncResult.message);
+    if (!shouldContinueAfterSync(syncResult, canSyncGitHub)) {
+      return syncResult;
     }
+
+    messages.push(syncResult.message);
+
+    if (canSyncGitHub && syncResult.success) {
+      const afterSync = await getPipelineReadiness();
+      if (
+        afterSync.willRunEnrich ||
+        afterSync.willRunScore ||
+        afterSync.willRunBatch
+      ) {
+        return {
+          success: true,
+          message: `${messages.join(" ")} GitHub sync runs in the background (~10–30 min). Click Run complete pipeline again after it finishes to enrich, score, and build today's batch.`,
+        };
+      }
+    }
+  } else if (readiness.skipSyncReason) {
+    messages.push(readiness.skipSyncReason);
   }
 
   const cloudResult = await runCloudPipeline();

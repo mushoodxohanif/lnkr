@@ -294,6 +294,7 @@ export async function getLeadDetail(
     ...summary,
     snListSource: lead.snListSource,
     scrapedAt: lead.scrapedAt,
+    notes: lead.notes,
     recentPosts: parseRecentPosts(lead.recentPosts),
     allContent: lead.generatedContent.map((content) => ({
       id: content.id,
