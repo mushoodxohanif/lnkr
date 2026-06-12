@@ -50,8 +50,8 @@ export default async function HomePage() {
             No daily batch yet
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-600">
-            Sync leads from your computer, then enrich, score, and build
-            today&apos;s batch from this dashboard. New here?{" "}
+            Run the complete pipeline to sync leads, score them, and build
+            today&apos;s batch. New here?{" "}
             <a
               href="/help"
               className="font-medium text-violet-700 hover:underline"
@@ -66,6 +66,9 @@ export default async function HomePage() {
         </div>
       ) : (
         <div className="space-y-6">
+          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+            <PipelineActions config={pipelineConfig} variant="complete-only" />
+          </div>
           {batch.leads.map((lead) => (
             <LeadCard key={lead.id} lead={lead} />
           ))}

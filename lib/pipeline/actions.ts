@@ -250,41 +250,55 @@ export async function runCloudPipeline(): Promise<PipelineActionState> {
   };
 }
 
-export async function runFullPipeline(): Promise<PipelineActionState> {
-  if (isVercelDeployment()) {
-    return runCloudPipeline();
+function shouldContinueAfterSync(
+  syncResult: PipelineActionState,
+  usedGitHubSync: boolean,
+): boolean {
+  if (syncResult.success) {
+    return true;
   }
 
-  const syncResult = await syncEnabledLists();
-  if (
-    !syncResult.success &&
-    !syncResult.message.includes("Daily scrape limit")
-  ) {
-    return syncResult;
+  if (syncResult.message.includes("Daily scrape limit")) {
+    return true;
   }
 
-  const enrichResult = await enrichPendingLeads();
-  if (!enrichResult.success) {
-    return enrichResult;
+  if (usedGitHubSync && syncResult.message.includes("GitHub sync")) {
+    return true;
   }
 
-  const scoreResult = await scorePendingLeads();
-  if (!scoreResult.success) {
-    return scoreResult;
+  return false;
+}
+
+/** Sync (when available) + enrich + score + build batch in one action. */
+export async function runCompletePipeline(): Promise<PipelineActionState> {
+  const messages: string[] = [];
+  const canSyncLocal = canRunPlaywrightSync();
+  const canSyncGitHub = isGitHubSyncConfigured();
+
+  if (canSyncLocal || canSyncGitHub) {
+    const syncResult = await syncEnabledLists();
+
+    if (!shouldContinueAfterSync(syncResult, canSyncGitHub)) {
+      return syncResult;
+    }
+
+    messages.push(syncResult.message);
   }
 
-  const rankResult = await buildDailyBatch(false);
-  if (!rankResult.success && rankResult.message.includes("already exists")) {
-    return {
-      success: true,
-      message: `Pipeline finished. ${syncResult.message} ${enrichResult.message} ${scoreResult.message} Today's batch was already built.`,
-    };
+  const cloudResult = await runCloudPipeline();
+
+  if (messages.length === 0) {
+    return cloudResult;
   }
 
   return {
-    success: rankResult.success,
-    message: `${syncResult.message} ${enrichResult.message} ${scoreResult.message} ${rankResult.message}`,
+    success: cloudResult.success,
+    message: `${messages.join(" ")} ${cloudResult.message}`,
   };
+}
+
+export async function runFullPipeline(): Promise<PipelineActionState> {
+  return runCompletePipeline();
 }
 
 export async function startLinkedInLogin(): Promise<PipelineActionState> {

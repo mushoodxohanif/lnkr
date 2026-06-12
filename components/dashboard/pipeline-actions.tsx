@@ -9,7 +9,7 @@ import {
   buildDailyBatch,
   enrichPendingLeads,
   type PipelineActionState,
-  runFullPipeline,
+  runCompletePipeline,
   scorePendingLeads,
   startLinkedInLogin,
   syncEnabledLists,
@@ -19,7 +19,7 @@ import { LOCAL_SYNC_COMMANDS } from "@/lib/runtime/deployment";
 
 type PipelineActionsProps = {
   config: PipelineConfig;
-  variant?: "full" | "compact" | "sync-only" | "login-only";
+  variant?: "full" | "compact" | "sync-only" | "login-only" | "complete-only";
   showRunAll?: boolean;
 };
 
@@ -138,6 +138,75 @@ function ActionButton({
       >
         {pending ? "Running..." : label}
       </button>
+    </div>
+  );
+}
+
+function CompletePipelineButton({
+  config,
+  pending,
+  active,
+  disabled,
+  disabledReason,
+  onClick,
+  compact = false,
+}: {
+  config: PipelineConfig;
+  pending: boolean;
+  active: boolean;
+  disabled: boolean;
+  disabledReason?: string;
+  onClick: () => void;
+  compact?: boolean;
+}) {
+  const isGitHubSync = config.syncProvider === "github";
+  const isLocalSync = config.syncProvider === "local";
+
+  const description = isGitHubSync
+    ? "Starts GitHub sync, then enriches, scores, and builds today's batch. Re-run after sync finishes if you need new leads in the batch."
+    : isLocalSync
+      ? "Syncs Sales Navigator lists, then enriches, scores, and builds today's batch."
+      : "Enriches, scores, and builds today's batch on leads already in the database.";
+
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        {disabled && disabledReason ? (
+          <p className="text-xs text-amber-700 sm:mr-auto">{disabledReason}</p>
+        ) : null}
+        <button
+          type="button"
+          disabled={pending || disabled}
+          onClick={onClick}
+          className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending && active ? "Running pipeline..." : "Run complete pipeline"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-violet-950">
+            Run complete pipeline
+          </p>
+          <p className="mt-0.5 text-sm text-violet-900/90">{description}</p>
+          {disabled && disabledReason ? (
+            <p className="mt-1 text-xs text-amber-800">{disabledReason}</p>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          disabled={pending || disabled}
+          onClick={onClick}
+          className="shrink-0 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending && active ? "Running pipeline..." : "Run complete pipeline"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -281,16 +350,67 @@ export function PipelineActions({
     );
   }
 
+  const completePipelineDisabled =
+    !config.enrichmentConfigured ||
+    !config.scoringConfigured ||
+    !config.contentConfigured;
+
+  const completePipelineDisabledReason = !config.enrichmentConfigured
+    ? `Set ENRICHMENT_API_KEY first. ${envHint}`
+    : !config.scoringConfigured || !config.contentConfigured
+      ? `Set GOOGLE_GENERATIVE_AI_API_KEY first. ${envHint}`
+      : undefined;
+
+  if (variant === "complete-only") {
+    return (
+      <div className="space-y-3">
+        <CompletePipelineButton
+          config={config}
+          pending={pending}
+          active={activeStep === "complete"}
+          disabled={completePipelineDisabled}
+          disabledReason={completePipelineDisabledReason}
+          compact
+          onClick={() => runStep("complete", runCompletePipeline)}
+        />
+        {status ? <PipelineStatusMessage status={status} /> : null}
+      </div>
+    );
+  }
+
   const visibleSteps =
     variant === "compact"
       ? steps.slice(2)
       : steps.filter((step) => !step.hidden);
-  const runAllDisabled =
-    pending ||
-    !config.enrichmentConfigured ||
-    !config.scoringConfigured ||
-    !config.contentConfigured ||
-    (config.playwrightAvailable && syncDisabled);
+
+  if (variant === "compact") {
+    return (
+      <div className="space-y-4">
+        <CompletePipelineButton
+          config={config}
+          pending={pending}
+          active={activeStep === "complete"}
+          disabled={completePipelineDisabled}
+          disabledReason={completePipelineDisabledReason}
+          onClick={() => runStep("complete", runCompletePipeline)}
+        />
+        <div className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white">
+          {visibleSteps.map((step) => (
+            <div key={step.id} className="p-4">
+              <ActionButton
+                label={step.label}
+                pending={pending && activeStep === step.id}
+                disabled={step.disabled}
+                disabledReason={step.disabledReason}
+                onClick={() => runStep(step.id, step.action)}
+              />
+            </div>
+          ))}
+        </div>
+        {status ? <PipelineStatusMessage status={status} /> : null}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -302,12 +422,30 @@ export function PipelineActions({
       ) : variant === "full" ? (
         <SyncProviderHint config={config} />
       ) : null}
+
+      {(variant === "full" || showRunAll) && (
+        <CompletePipelineButton
+          config={config}
+          pending={pending}
+          active={activeStep === "complete"}
+          disabled={completePipelineDisabled}
+          disabledReason={completePipelineDisabledReason}
+          onClick={() => runStep("complete", runCompletePipeline)}
+        />
+      )}
+
+      {variant === "full" ? (
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          Or run steps individually
+        </p>
+      ) : null}
+
       <div className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white">
         {visibleSteps.map((step) => (
           <div key={step.id} className="p-4">
             <ActionButton
               label={step.label}
-              description={variant === "compact" ? undefined : step.description}
+              description={step.description}
               pending={pending && activeStep === step.id}
               disabled={step.disabled}
               disabledReason={step.disabledReason}
@@ -317,35 +455,6 @@ export function PipelineActions({
           </div>
         ))}
       </div>
-
-      {showRunAll && variant === "full" ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-zinc-900">
-              {isVercel ? "Run cloud pipeline" : "Run full pipeline"}
-            </p>
-            <p className="mt-0.5 text-sm text-zinc-600">
-              {isVercel
-                ? isGitHubSync
-                  ? "Enrich, score, and build today's batch on Vercel. Run this after GitHub sync finishes."
-                  : "Enrich, score, and build today's batch on Vercel."
-                : "Sync, enrich, score, and build today's batch in one go."}
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={runAllDisabled}
-            onClick={() => runStep("all", runFullPipeline)}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {pending && activeStep === "all"
-              ? "Running pipeline..."
-              : isVercel
-                ? "Run cloud pipeline"
-                : "Run all"}
-          </button>
-        </div>
-      ) : null}
 
       {status ? <PipelineStatusMessage status={status} /> : null}
     </div>
