@@ -30,7 +30,7 @@ export default async function HomePage() {
   return (
     <DashboardShell
       title="Today's top 50"
-      description="Review fit scores, copy drafts, and track outreach manually. Nothing is sent automatically."
+      description="Review fit scores, copy drafts, and track outreach manually. Nothing is sent automatically. Daily batch: top 50 qualified leads; sync capped at 50 profiles/day by default."
       headerExtra={
         batch ? (
           <div className="text-right text-sm text-zinc-500">

@@ -13,6 +13,7 @@ import {
   isVercelDeployment,
   LOCAL_SYNC_COMMANDS,
 } from "@/lib/runtime/deployment";
+import { getSafetyConfig, getTodayScrapeCount } from "@/lib/safety/config";
 import type { SyncResult } from "../../packages/sn-scraper/src/types";
 
 export type PipelineActionState = {
@@ -274,15 +275,27 @@ export async function runCompletePipeline(): Promise<PipelineActionState> {
   const messages: string[] = [];
   const canSyncLocal = canRunPlaywrightSync();
   const canSyncGitHub = isGitHubSyncConfigured();
+  const safety = getSafetyConfig();
+  const todayScrapeCount = await getTodayScrapeCount();
+  const remainingScrapes = Math.max(
+    0,
+    safety.dailyScrapeLimit - todayScrapeCount,
+  );
 
   if (canSyncLocal || canSyncGitHub) {
-    const syncResult = await syncEnabledLists();
+    if (remainingScrapes <= 0) {
+      messages.push(
+        `Daily scrape limit reached (${todayScrapeCount}/${safety.dailyScrapeLimit} today) — skipped sync, running cloud pipeline on existing leads.`,
+      );
+    } else {
+      const syncResult = await syncEnabledLists();
 
-    if (!shouldContinueAfterSync(syncResult, canSyncGitHub)) {
-      return syncResult;
+      if (!shouldContinueAfterSync(syncResult, canSyncGitHub)) {
+        return syncResult;
+      }
+
+      messages.push(syncResult.message);
     }
-
-    messages.push(syncResult.message);
   }
 
   const cloudResult = await runCloudPipeline();

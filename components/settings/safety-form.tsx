@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { ApplicationLimits } from "@/components/dashboard/application-limits";
 import { GitHubSessionSetup } from "@/components/dashboard/local-sync-guide";
 import { PipelineActions } from "@/components/dashboard/pipeline-actions";
 import {
@@ -73,19 +74,36 @@ export function SafetyForm({
   return (
     <div className="space-y-6">
       <FormSection
+        title="Application limits"
+        description="How lnkr caps sync volume, batch size, and cloud processing. Tune scraper settings via environment variables (see GitHub Secrets or .env.local)."
+      >
+        <ApplicationLimits config={pipelineConfig} defaultOpen />
+      </FormSection>
+
+      <FormSection
         title="Scraper safety limits"
-        description="Read-only limits for local Playwright sync. Change via Vercel env vars or `.env.local` when syncing from your computer."
+        description="Live usage against your configured scrape caps. Change limits via Vercel env vars, GitHub Actions Variables, or `.env.local`."
       >
         <dl className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+          <div
+            className={`rounded-lg border px-4 py-3 ${
+              safety.remainingToday <= 0
+                ? "border-amber-300 bg-amber-50"
+                : safety.remainingToday <= 10
+                  ? "border-orange-200 bg-orange-50"
+                  : "border-zinc-200 bg-zinc-50"
+            }`}
+          >
             <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               Daily scrape limit
             </dt>
             <dd className="mt-1 text-lg font-semibold text-zinc-900">
               {safety.todayScrapeCount} / {safety.dailyScrapeLimit}
             </dd>
-            <p className="mt-1 text-xs text-zinc-500">
-              {safety.remainingToday} remaining today
+            <p className="mt-1 text-xs text-zinc-600">
+              {safety.remainingToday <= 0
+                ? "Limit reached — sync won't save new profiles until tomorrow"
+                : `${safety.remainingToday} remaining today`}
             </p>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">

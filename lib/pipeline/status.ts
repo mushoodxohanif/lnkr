@@ -1,4 +1,8 @@
-import { isContentGenerationConfigured } from "@/lib/agent/config";
+import {
+  DAILY_BATCH_SIZE,
+  isContentGenerationConfigured,
+  MAX_LEADS_PER_COMPANY,
+} from "@/lib/agent/config";
 import { db } from "@/lib/db";
 import { isEnrichmentConfigured } from "@/lib/enrichment/config";
 import { isScoringConfigured } from "@/lib/icp/config";
@@ -10,7 +14,7 @@ import {
   isGitHubSessionConfigured,
   isGitHubSyncConfigured,
 } from "@/lib/runtime/deployment";
-import { getSafetyConfig } from "@/lib/safety/config";
+import { getSafetyConfig, getTodayScrapeCount } from "@/lib/safety/config";
 
 export type PipelineConfig = {
   browserProfileExists: boolean;
@@ -24,12 +28,21 @@ export type PipelineConfig = {
   githubSyncConfigured: boolean;
   sessionConfigured: boolean;
   batchLimit: number;
+  dailyBatchSize: number;
+  dailyScrapeLimit: number;
+  todayScrapeCount: number;
+  remainingScrapesToday: number;
+  maxPostsPerProfile: number;
+  scrapeMinDelaySec: number;
+  scrapeMaxDelaySec: number;
+  maxLeadsPerCompany: number;
 };
 
 export async function getPipelineConfig(): Promise<PipelineConfig> {
-  const [enabledListCount, safety] = await Promise.all([
+  const safety = getSafetyConfig();
+  const [enabledListCount, todayScrapeCount] = await Promise.all([
     db.snListConfig.count({ where: { enabled: true } }),
-    Promise.resolve(getSafetyConfig()),
+    getTodayScrapeCount(),
   ]);
 
   return {
@@ -48,5 +61,16 @@ export async function getPipelineConfig(): Promise<PipelineConfig> {
       ? safety.browserProfileExists
       : isGitHubSessionConfigured(),
     batchLimit: getPipelineBatchLimit(),
+    dailyBatchSize: DAILY_BATCH_SIZE,
+    dailyScrapeLimit: safety.dailyScrapeLimit,
+    todayScrapeCount,
+    remainingScrapesToday: Math.max(
+      0,
+      safety.dailyScrapeLimit - todayScrapeCount,
+    ),
+    maxPostsPerProfile: safety.maxPostsPerProfile,
+    scrapeMinDelaySec: Math.round(safety.minDelayMs / 1000),
+    scrapeMaxDelaySec: Math.round(safety.maxDelayMs / 1000),
+    maxLeadsPerCompany: MAX_LEADS_PER_COMPANY,
   };
 }

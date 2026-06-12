@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ApplicationLimits } from "@/components/dashboard/application-limits";
+import { DailyScrapeLimitBanner } from "@/components/dashboard/daily-scrape-limit-banner";
 import {
   GitHubSessionSetup,
   LocalSyncGuide,
@@ -14,6 +16,7 @@ import {
   startLinkedInLogin,
   syncEnabledLists,
 } from "@/lib/pipeline/actions";
+import { getScrapeLimitStatus } from "@/lib/pipeline/scrape-limit-guidance";
 import type { PipelineConfig } from "@/lib/pipeline/status";
 import { LOCAL_SYNC_COMMANDS } from "@/lib/runtime/deployment";
 
@@ -85,6 +88,16 @@ function PipelineStatusMessage({ status }: { status: PipelineActionState }) {
     >
       {status.message}
     </p>
+  );
+}
+
+function PipelineLimitsFooter({ config }: { config: PipelineConfig }) {
+  return (
+    <ApplicationLimits
+      config={config}
+      defaultOpen={false}
+      showDailyBanner={false}
+    />
   );
 }
 
@@ -161,12 +174,15 @@ function CompletePipelineButton({
 }) {
   const isGitHubSync = config.syncProvider === "github";
   const isLocalSync = config.syncProvider === "local";
+  const scrapeLimitExhausted = config.remainingScrapesToday <= 0;
 
-  const description = isGitHubSync
-    ? "Starts GitHub sync, then enriches, scores, and builds today's batch. Re-run after sync finishes if you need new leads in the batch."
-    : isLocalSync
-      ? "Syncs Sales Navigator lists, then enriches, scores, and builds today's batch."
-      : "Enriches, scores, and builds today's batch on leads already in the database.";
+  const description = scrapeLimitExhausted
+    ? "Daily scrape cap is full — runs enrich, score, and batch on leads already in the database (no new profiles until tomorrow)."
+    : isGitHubSync
+      ? "Starts GitHub sync, then enriches, scores, and builds today's batch. Re-run after sync finishes if you need new leads in the batch."
+      : isLocalSync
+        ? "Syncs Sales Navigator lists, then enriches, scores, and builds today's batch."
+        : "Enriches, scores, and builds today's batch on leads already in the database.";
 
   if (compact) {
     return (
@@ -236,28 +252,40 @@ export function PipelineActions({
     });
   }
 
+  const scrapeLimitExhausted = config.remainingScrapesToday <= 0;
+  const scrapeLimitLow = getScrapeLimitStatus(config) === "low";
+
   const syncDisabled =
     !canSync ||
     config.enabledListCount === 0 ||
-    (isGitHubSync && !config.sessionConfigured);
+    (isGitHubSync && !config.sessionConfigured) ||
+    scrapeLimitExhausted;
 
-  const syncDisabledReason = !canSync
-    ? isVercel
-      ? `Configure GitHub sync (GITHUB_SYNC_TOKEN, GITHUB_REPO) or run locally: ${LOCAL_SYNC_COMMANDS.sync}`
-      : undefined
-    : config.enabledListCount === 0
-      ? "Add and enable at least one Sales Navigator list in Settings."
-      : isGitHubSync && !config.sessionConfigured
-        ? "Complete LinkedIn session setup in Settings → Safety first."
-        : undefined;
+  const syncDisabledReason = scrapeLimitExhausted
+    ? `Daily scrape limit reached (${config.todayScrapeCount}/${config.dailyScrapeLimit} today). Run the cloud pipeline on existing leads, or sync again tomorrow.`
+    : !canSync
+      ? isVercel
+        ? `Configure GitHub sync (GITHUB_SYNC_TOKEN, GITHUB_REPO) or run locally: ${LOCAL_SYNC_COMMANDS.sync}`
+        : undefined
+      : config.enabledListCount === 0
+        ? "Add and enable at least one Sales Navigator list in Settings."
+        : isGitHubSync && !config.sessionConfigured
+          ? "Complete LinkedIn session setup in Settings → Safety first."
+          : undefined;
+
+  const syncDescription = scrapeLimitExhausted
+    ? "No profile scrapes left today — use Run complete pipeline on leads already in the database."
+    : isGitHubSync
+      ? scrapeLimitLow
+        ? `Trigger GitHub sync (~10–30 min). Only ${config.remainingScrapesToday} scrape${config.remainingScrapesToday === 1 ? "" : "s"} left today — use one run.`
+        : "Trigger Sales Navigator sync via GitHub Actions (~10–30 min). Run the cloud pipeline after it completes."
+      : config.playwrightAvailable
+        ? scrapeLimitLow
+          ? `Pull leads from enabled lists. ${config.remainingScrapesToday} scrape${config.remainingScrapesToday === 1 ? "" : "s"} remaining today.`
+          : "Pull leads from enabled Sales Navigator lists using Playwright on this machine."
+        : "Runs on your computer with the same DATABASE_URL as this deployment.";
 
   const syncLabel = isGitHubSync ? "Sync lists (GitHub)" : "Sync lists";
-
-  const syncDescription = isGitHubSync
-    ? "Trigger Sales Navigator sync via GitHub Actions (~10–30 min). Run the cloud pipeline after it completes."
-    : config.playwrightAvailable
-      ? "Pull leads from enabled Sales Navigator lists using Playwright on this machine."
-      : "Runs on your computer with the same DATABASE_URL as this deployment.";
 
   const steps: PipelineStep[] = [
     {
@@ -303,6 +331,7 @@ export function PipelineActions({
   if (variant === "login-only") {
     return (
       <div className="space-y-3">
+        <DailyScrapeLimitBanner config={config} />
         {isGitHubSync ? (
           <GitHubSessionSetup />
         ) : isVercel ? (
@@ -319,6 +348,7 @@ export function PipelineActions({
             onClick={() => runStep("login", startLinkedInLogin)}
           />
         )}
+        <PipelineLimitsFooter config={config} />
         {status ? <PipelineStatusMessage status={status} /> : null}
       </div>
     );
@@ -328,6 +358,7 @@ export function PipelineActions({
     const syncStep = steps[0];
     return (
       <div className="space-y-3">
+        <DailyScrapeLimitBanner config={config} />
         <LocalSyncGuide
           compact={isVercel}
           syncProvider={config.syncProvider}
@@ -345,6 +376,7 @@ export function PipelineActions({
             onClick={() => runStep("sync", syncStep.action)}
           />
         ) : null}
+        <PipelineLimitsFooter config={config} />
         {status ? <PipelineStatusMessage status={status} /> : null}
       </div>
     );
@@ -364,6 +396,7 @@ export function PipelineActions({
   if (variant === "complete-only") {
     return (
       <div className="space-y-3">
+        <DailyScrapeLimitBanner config={config} compact />
         <CompletePipelineButton
           config={config}
           pending={pending}
@@ -373,6 +406,14 @@ export function PipelineActions({
           compact
           onClick={() => runStep("complete", runCompletePipeline)}
         />
+        <details className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+          <summary className="cursor-pointer text-xs font-medium text-zinc-700">
+            Application limits
+          </summary>
+          <div className="mt-2">
+            <ApplicationLimits config={config} compact />
+          </div>
+        </details>
         {status ? <PipelineStatusMessage status={status} /> : null}
       </div>
     );
@@ -386,6 +427,7 @@ export function PipelineActions({
   if (variant === "compact") {
     return (
       <div className="space-y-4">
+        <DailyScrapeLimitBanner config={config} />
         <CompletePipelineButton
           config={config}
           pending={pending}
@@ -407,6 +449,7 @@ export function PipelineActions({
             </div>
           ))}
         </div>
+        <PipelineLimitsFooter config={config} />
         {status ? <PipelineStatusMessage status={status} /> : null}
       </div>
     );
@@ -414,6 +457,7 @@ export function PipelineActions({
 
   return (
     <div className="space-y-4">
+      <DailyScrapeLimitBanner config={config} />
       {variant === "full" && isVercel ? (
         <LocalSyncGuide
           syncProvider={config.syncProvider}
@@ -455,6 +499,8 @@ export function PipelineActions({
           </div>
         ))}
       </div>
+
+      <PipelineLimitsFooter config={config} />
 
       {status ? <PipelineStatusMessage status={status} /> : null}
     </div>
