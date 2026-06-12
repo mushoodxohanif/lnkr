@@ -5,8 +5,8 @@ import { closeBrowserContext, launchBrowser } from "./browser";
 import { loadConfig } from "./config";
 
 const packageRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-loadEnv({ path: resolve(packageRoot, "../../.env.local") });
-loadEnv({ path: resolve(packageRoot, "../../.env") });
+loadEnv({ path: resolve(packageRoot, "../../.env.local"), quiet: true });
+loadEnv({ path: resolve(packageRoot, "../../.env"), quiet: true });
 
 async function main(): Promise<void> {
   const config = loadConfig({ sessionMode: "profile" });

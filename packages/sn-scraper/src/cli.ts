@@ -5,8 +5,8 @@ import { runLoginFlow, runSync } from "./sync";
 import { parseCliArgs } from "./utils";
 
 const packageRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-loadEnv({ path: resolve(packageRoot, "../../.env.local") });
-loadEnv({ path: resolve(packageRoot, "../../.env") });
+loadEnv({ path: resolve(packageRoot, "../../.env.local"), quiet: true });
+loadEnv({ path: resolve(packageRoot, "../../.env"), quiet: true });
 
 function printHelp(): void {
   console.log(`
