@@ -16,7 +16,7 @@ export const PROMPT_TEMPLATE_DESCRIPTIONS: Record<PromptTemplateKey, string> = {
   warming_comment:
     "Extra instructions appended when generating LinkedIn post comments.",
   connection_note:
-    "Extra instructions appended when generating connection request notes.",
+    "Extra instructions appended when generating insight-driven connection request notes.",
   icp_scoring:
     "Extra instructions appended when evaluating ICP fit with Gemini.",
 };

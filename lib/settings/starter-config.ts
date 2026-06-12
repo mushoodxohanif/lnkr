@@ -107,10 +107,11 @@ Ground pain points in their company name, headline, and industry — do not inve
 Reference one specific detail from their post and ask one genuine follow-up question.
 Never mention AI, automation, your product, or booking a call.
 Keep it to 2–3 sentences; no generic praise like "Great post!"`,
-  connection_note: `Open with their company or role in fitness/wellness.
-Tie one value hook to a likely pain: missed member inquiries, manual admin, or after-hours phone coverage.
-Stay under 280 characters, conversational, one soft CTA (e.g. happy to share what similar studios tried).
-No links, no buzzwords, no "pick your brain".`,
+  connection_note: `Write as a peer founder in fitness/wellness or adjacent B2B ops — never a vendor or marketer.
+Observe something real: their company, a recent post, hiring, or growth signal.
+Add one insight about hidden scaling friction (missed inquiries, manual admin, after-hours coverage, member follow-up gaps).
+End with a curiosity question — no CTA, no pitch, no mention of AI or your services.
+Stay under 300 characters. No "hope you're doing well", no links, no buzzwords.`,
 };
 
 export const STARTER_CASE_STUDIES: CaseStudy[] = STARTER_PRODUCT.caseStudies;

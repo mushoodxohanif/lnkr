@@ -20,7 +20,7 @@ export type GeneratedLeadContent = {
   painPoints: string[];
   personalizationHooks: string[];
   referencedPostDetail?: string;
-  valueHook?: string;
+  insightHook?: string;
 };
 
 export type GenerateContentResult = {

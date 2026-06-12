@@ -96,6 +96,6 @@ export async function generateLeadContent(
     painPoints,
     personalizationHooks: connectionResult.personalization_hooks,
     referencedPostDetail: warmingResult?.referenced_detail,
-    valueHook: connectionResult.value_hook,
+    insightHook: connectionResult.insight_hook,
   };
 }

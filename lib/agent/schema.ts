@@ -28,11 +28,13 @@ export const connectionNoteSchema = z.object({
     .min(2)
     .max(4)
     .describe("Specific facts used to personalize the note"),
-  value_hook: z
+  insight_hook: z
     .string()
     .min(10)
     .max(120)
-    .describe("Single value proposition tailored to this lead"),
+    .describe(
+      "Single industry insight or hidden bottleneck referenced in the note",
+    ),
 });
 
 export type WarmingCommentOutput = z.infer<typeof warmingCommentSchema>;
