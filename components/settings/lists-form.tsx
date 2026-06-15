@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import {
   Field,
   FormMessage,
@@ -12,7 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { deleteSnList, saveSnList, toggleSnList } from "@/lib/settings/actions";
+import {
+  deleteSnList,
+  exportSnListCsvAction,
+  saveSnList,
+  toggleSnList,
+} from "@/lib/settings/actions";
 import type { SnListData } from "@/lib/settings/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +26,65 @@ const initialState = { success: false, message: "" };
 type ListsFormProps = {
   lists: SnListData[];
 };
+
+function downloadCsv(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function ListCsvDownloadButton({
+  listId,
+  listName,
+  leadCount,
+  disabled,
+}: {
+  listId: string;
+  listName: string;
+  leadCount: number;
+  disabled?: boolean;
+}) {
+  const [exportPending, startExport] = useTransition();
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  function handleExport() {
+    startExport(async () => {
+      setExportError(null);
+      try {
+        const { csv, filename } = await exportSnListCsvAction(listId);
+        downloadCsv(csv, filename);
+      } catch {
+        setExportError("Download failed. Try again.");
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={disabled || exportPending || leadCount === 0}
+        onClick={handleExport}
+        title={
+          leadCount === 0
+            ? "Sync this list first to download leads."
+            : `Download ${leadCount} synced leads from ${listName} as CSV`
+        }
+      >
+        {exportPending ? "Downloading…" : "Download CSV"}
+      </Button>
+      {exportError ? (
+        <p className="text-xs text-destructive">{exportError}</p>
+      ) : null}
+    </div>
+  );
+}
 
 export function ListsForm({ lists }: ListsFormProps) {
   const [saveState, saveAction, savePending] = useActionState(
@@ -92,9 +156,18 @@ export function ListsForm({ lists }: ListsFormProps) {
                     {list.lastSyncedAt
                       ? `Last synced ${list.lastSyncedAt.toLocaleString()}`
                       : "Never synced"}
+                    {list.leadCount > 0
+                      ? ` · ${list.leadCount} lead${list.leadCount === 1 ? "" : "s"} in database`
+                      : null}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <ListCsvDownloadButton
+                    listId={list.id}
+                    listName={list.name}
+                    leadCount={list.leadCount}
+                    disabled={anyPending}
+                  />
                   <form action={toggleAction}>
                     <input type="hidden" name="id" value={list.id} />
                     <input

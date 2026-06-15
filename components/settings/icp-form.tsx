@@ -100,8 +100,9 @@ export function ICPForm({ initialData }: ICPFormProps) {
         <AlertTitle>Start simple</AlertTitle>
         <AlertDescription>
           Match <strong>target titles</strong> to the jobs in your Sales
-          Navigator list. Leave industries empty to reuse{" "}
-          <strong>Product → Target industries</strong>. Default fit threshold is{" "}
+          Navigator list. Leave industries empty to reuse&nbsp;
+          <strong>Product → Target industries</strong>. Default fit threshold
+          is&nbsp;
           {DEFAULT_FIT_THRESHOLD}% — raise it once batches look good.
         </AlertDescription>
       </Alert>

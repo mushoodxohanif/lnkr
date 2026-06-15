@@ -56,9 +56,9 @@ function SyncProviderHint({ config }: { config: PipelineConfig }) {
   return (
     <Alert className="border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
       <AlertDescription>
-        No LinkedIn session saved yet. Run{" "}
-        <code className="font-mono text-xs">{LOCAL_SYNC_COMMANDS.login}</code>{" "}
-        on your computer, or use Settings → Safety when running locally.
+        No LinkedIn session saved yet. Run&nbsp;
+        <code className="font-mono text-xs">{LOCAL_SYNC_COMMANDS.login}</code>
+        &nbsp; on your computer, or use Settings → Safety when running locally.
       </AlertDescription>
     </Alert>
   );

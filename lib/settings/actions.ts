@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { logActivity } from "@/lib/activity/log";
 import { getRecentActivityLogs } from "@/lib/activity/queries";
+import { exportFinalizedLeadsCsv } from "@/lib/dashboard/finalized-leads";
 import { db } from "@/lib/db";
 import { PROMPT_TEMPLATE_KEYS, savePromptTemplate } from "@/lib/prompts/store";
 import { getSafetyConfig, getTodayScrapeCount } from "@/lib/safety/config";
@@ -253,9 +254,20 @@ export async function saveICPCriteria(
 }
 
 export async function getSnLists(): Promise<SnListData[]> {
-  const lists = await db.snListConfig.findMany({
-    orderBy: { createdAt: "asc" },
-  });
+  const [lists, leadCounts] = await Promise.all([
+    db.snListConfig.findMany({
+      orderBy: { createdAt: "asc" },
+    }),
+    db.lead.groupBy({
+      by: ["snListSource"],
+      where: { scrapedAt: { not: null } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const leadCountBySource = new Map(
+    leadCounts.map((row) => [row.snListSource, row._count._all]),
+  );
 
   return lists.map((list) => ({
     id: list.id,
@@ -263,7 +275,39 @@ export async function getSnLists(): Promise<SnListData[]> {
     url: list.url,
     enabled: list.enabled,
     lastSyncedAt: list.lastSyncedAt,
+    leadCount: leadCountBySource.get(list.url) ?? 0,
   }));
+}
+
+function slugifyListName(name: string): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug || "sn-list";
+}
+
+export async function exportSnListCsvAction(
+  listId: string,
+): Promise<{ csv: string; filename: string }> {
+  const list = await db.snListConfig.findUnique({
+    where: { id: listId },
+    select: { url: true, name: true },
+  });
+
+  if (!list) {
+    throw new Error("List not found.");
+  }
+
+  const { csv } = await exportFinalizedLeadsCsv({ snListSource: list.url });
+  const date = new Date().toISOString().slice(0, 10);
+
+  return {
+    csv,
+    filename: `${slugifyListName(list.name)}-${date}.csv`,
+  };
 }
 
 export async function saveSnList(

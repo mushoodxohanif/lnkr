@@ -27,19 +27,19 @@ export function GitHubSessionSetup() {
         </p>
         <ol className="list-decimal space-y-2 pl-5">
           <li>
-            On your computer:{" "}
+            On your computer:&nbsp;
             <code className="rounded bg-background px-1 font-mono text-xs">
               {GITHUB_SESSION_COMMANDS.envPull}
             </code>
           </li>
           <li>
-            Sign in once:{" "}
+            Sign in once:&nbsp;
             <code className="rounded bg-background px-1 font-mono text-xs">
               {GITHUB_SESSION_COMMANDS.login}
             </code>
           </li>
           <li>
-            Export cookies to GitHub Secrets:{" "}
+            Export cookies to GitHub Secrets:&nbsp;
             <code className="mt-1 block rounded bg-background px-2 py-1 font-mono text-xs">
               {GITHUB_SESSION_COMMANDS.setCookiesSecret}
             </code>
@@ -62,20 +62,20 @@ function GitHubSyncGuide({
     return (
       <Alert className="border-primary/30 bg-primary/5 text-primary">
         <AlertDescription>
-          Sync runs in GitHub Actions when you click{" "}
+          Sync runs in GitHub Actions when you click&nbsp;
           <strong>Sync lists (GitHub)</strong> (~10–30 min). After it finishes,
           run <strong>Run cloud pipeline</strong> here.
           {!sessionConfigured ? (
             <>
-              {" "}
-              LinkedIn session cookies are not marked configured — complete{" "}
+              &nbsp; LinkedIn session cookies are not marked configured —
+              complete&nbsp;
               <a
                 href="/settings/safety"
                 className="font-medium underline hover:text-foreground"
               >
                 Session setup
-              </a>{" "}
-              in Settings → Safety.
+              </a>
+              &nbsp; in Settings → Safety.
             </>
           ) : null}
         </AlertDescription>
@@ -109,13 +109,13 @@ function LocalCliSyncGuide({ compact }: { compact: boolean }) {
     return (
       <Alert>
         <AlertDescription>
-          Sales Navigator sync runs on your computer, not on Vercel. Use{" "}
+          Sales Navigator sync runs on your computer, not on Vercel. Use&nbsp;
           <code className="rounded bg-muted px-1 font-mono text-xs">
             {LOCAL_SYNC_COMMANDS.sync}
-          </code>{" "}
-          locally with the same{" "}
+          </code>
+          &nbsp; locally with the same&nbsp;
           <code className="font-mono text-xs">DATABASE_URL</code> as production.
-          See the{" "}
+          See the&nbsp;
           <a
             href="/help#local-sync"
             className="font-medium text-primary underline hover:text-foreground"
@@ -139,19 +139,19 @@ function LocalCliSyncGuide({ compact }: { compact: boolean }) {
         </p>
         <ol className="list-decimal space-y-2 pl-5">
           <li>
-            In this repo locally:{" "}
+            In this repo locally:&nbsp;
             <code className="rounded bg-background/80 px-1 font-mono text-xs">
               {LOCAL_SYNC_COMMANDS.envPull}
             </code>
           </li>
           <li>
-            First time only:{" "}
+            First time only:&nbsp;
             <code className="rounded bg-background/80 px-1 font-mono text-xs">
               {LOCAL_SYNC_COMMANDS.login}
             </code>
           </li>
           <li>
-            Each sync:{" "}
+            Each sync:&nbsp;
             <code className="rounded bg-background/80 px-1 font-mono text-xs">
               {LOCAL_SYNC_COMMANDS.sync}
             </code>
@@ -160,12 +160,12 @@ function LocalCliSyncGuide({ compact }: { compact: boolean }) {
         <p className="text-xs">
           You can add Sales Navigator list URLs on Vercel without signing in —
           only the sync step needs a local LinkedIn session. Then return here
-          and run <strong>Enrich</strong>, <strong>Score</strong>, and{" "}
+          and run <strong>Enrich</strong>, <strong>Score</strong>, and&nbsp;
           <strong>Build today&apos;s batch</strong> from the dashboard.
         </p>
         <p className="text-xs">
           Or configure GitHub Actions sync (
-          <code className="font-mono">GITHUB_SYNC_TOKEN</code>,{" "}
+          <code className="font-mono">GITHUB_SYNC_TOKEN</code>,&nbsp;
           <code className="font-mono">GITHUB_REPO</code>) to sync from the
           dashboard without a local CLI.
         </p>

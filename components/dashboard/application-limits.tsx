@@ -107,7 +107,8 @@ export function ApplicationLimits({
       <ul className="space-y-1.5 text-xs leading-5 text-muted-foreground">
         {rows.map((row) => (
           <li key={row.label}>
-            <span className="font-medium text-foreground">{row.label}:</span>{" "}
+            <span className="font-medium text-foreground">{row.label}:</span>
+            &nbsp;
             {row.value}
           </li>
         ))}

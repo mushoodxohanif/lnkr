@@ -50,8 +50,7 @@ export function DataTablePagination<TData>({
         {rowTotal} row{rowTotal === 1 ? "" : "s"}
         {pageCount > 0 ? (
           <>
-            {" "}
-            · page {pageIndex + 1} of {pageCount}
+            &nbsp; · page {pageIndex + 1} of {pageCount}
           </>
         ) : null}
       </p>

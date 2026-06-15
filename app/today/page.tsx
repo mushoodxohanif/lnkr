@@ -43,7 +43,7 @@ export default async function TodayPage() {
             <CardTitle>No daily batch yet</CardTitle>
             <CardDescription className="mx-auto max-w-md">
               Run the complete pipeline to sync leads, score them, and build
-              today&apos;s batch. New here?{" "}
+              today&apos;s batch. New here?&nbsp;
               <Link
                 href="/help"
                 className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"

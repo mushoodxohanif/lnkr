@@ -50,6 +50,7 @@ export type SnListData = {
   url: string;
   enabled: boolean;
   lastSyncedAt: Date | null;
+  leadCount: number;
 };
 
 export type DoNotContactEntry = {

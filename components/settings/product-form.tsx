@@ -71,11 +71,11 @@ export function ProductForm({ initialData }: ProductFormProps) {
         <AlertTitle>Minimum setup</AlertTitle>
         <AlertDescription>
           Product name + at least one value proposition. Industries and personas
-          feed ICP scoring when ICP fields are left empty. See the{" "}
+          feed ICP scoring when ICP fields are left empty. See the&nbsp;
           <a href="/help" className="font-medium text-foreground underline">
             setup guide
-          </a>{" "}
-          for a full walkthrough.
+          </a>
+          &nbsp; for a full walkthrough.
         </AlertDescription>
       </Alert>
 
@@ -115,7 +115,7 @@ export function ProductForm({ initialData }: ProductFormProps) {
         <ProductTagFields initialData={data} />
       </FormSection>
 
-      <Collapsible className="rounded-xl border border-border bg-card shadow-sm">
+      <Collapsible className="rounded-xl border border-border bg-card shadow-sm p-4">
         <CardHeader className="pb-0">
           <CollapsibleTrigger className="group flex w-full items-center justify-between text-left">
             <CardTitle className="text-base">Optional case studies</CardTitle>

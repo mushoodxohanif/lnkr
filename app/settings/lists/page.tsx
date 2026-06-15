@@ -25,7 +25,7 @@ export default async function ListsSettingsPage() {
       description="Add saved SN list URLs on Vercel, then sync from your computer with the same database."
     >
       <ListsForm lists={lists} />
-      <Card>
+      <Card className="mt-5">
         <CardHeader>
           <CardTitle>Sync now</CardTitle>
           <CardDescription>
