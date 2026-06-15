@@ -43,7 +43,7 @@ export default async function HistoryPage() {
   return (
     <DashboardShell
       title="Outreach history"
-      description="Past daily top-50 batches and how many leads you actioned."
+      description={`Past daily top-${pipelineConfig.dailyBatchSize} batches and how many leads you actioned.`}
     >
       {batches.length === 0 ? (
         <Card className="border-dashed shadow-sm">

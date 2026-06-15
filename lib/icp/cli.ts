@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
 import { isScoringConfigured, scoreLead, scoreLeadsBatch } from "@/lib/icp";
 
 function printUsage(): void {
@@ -8,7 +9,7 @@ function printUsage(): void {
   bun run score:leads --lead-id <id> [--force] [--rules-only]
 
 Options:
-  --limit N       Max leads to process (default: 50)
+  --limit N       Max leads to process (default: ${DAILY_BATCH_SIZE})
   --force         Re-score leads that already have scores
   --rules-only    Skip LLM evaluation (rule engine only)
   --lead-id ID    Score a single lead by ID

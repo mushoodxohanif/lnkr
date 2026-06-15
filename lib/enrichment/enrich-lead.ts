@@ -1,3 +1,4 @@
+import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
 import { db } from "@/lib/db";
 import { logEnrichmentActivity } from "@/lib/enrichment/activity";
 import { isEnrichmentBlockingError } from "@/lib/enrichment/blocking";
@@ -183,7 +184,7 @@ export async function enrichLeadsBatch(
           scrapedAt: { not: null },
         },
     orderBy: { scrapedAt: "desc" },
-    take: options.limit ?? 50,
+    take: options.limit ?? DAILY_BATCH_SIZE,
     select: { id: true },
   });
 

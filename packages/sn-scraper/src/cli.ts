@@ -29,7 +29,7 @@ Options:
 Environment:
   BROWSER_PROFILE_DIR        Persistent Chrome profile (default: ~/.lnkr/browser-profile)
   LINKEDIN_SESSION_COOKIES   JSON cookie array for headless/CI sync (see bun sn:export-cookies)
-  DAILY_SCRAPE_LIMIT         Max profiles per day (default: 50)
+  DAILY_SCRAPE_LIMIT         Max profiles per day (default: 15)
   SCRAPE_MIN_DELAY_MS        Min delay between profiles (default: 4000)
   SCRAPE_MAX_DELAY_MS        Max delay between profiles (default: 10000)
   SCRAPE_HEADLESS            Set to true for headless mode (default: headed locally)

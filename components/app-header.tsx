@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
+import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   {
     href: "/today",
-    label: "Today's top 50",
+    label: `Today's top ${DAILY_BATCH_SIZE}`,
     match: (pathname: string) => pathname === "/today",
   },
   {

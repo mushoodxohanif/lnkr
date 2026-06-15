@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
 import {
   enrichLead,
   enrichLeadsBatch,
@@ -12,7 +13,7 @@ function printUsage(): void {
   bun run enrich:leads --lead-id <id> [--force] [--contact]
 
 Options:
-  --limit N     Max leads to process (default: 50)
+  --limit N     Max leads to process (default: ${DAILY_BATCH_SIZE})
   --force       Bypass 7-day cache TTL
   --contact     Also enrich contact data via provider
   --all         Include leads that already have enrichment

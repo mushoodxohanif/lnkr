@@ -2,6 +2,7 @@ import type { LeadStatus, Prisma } from "@/app/generated/prisma/client";
 import { logContentActivity } from "@/lib/agent/activity";
 import {
   CONTENT_BATCH_CONCURRENCY,
+  DAILY_BATCH_SIZE,
   isContentGenerationConfigured,
 } from "@/lib/agent/config";
 import { generateLeadContent } from "@/lib/agent/content-generator";
@@ -223,7 +224,7 @@ export async function generateContentBatch(
       scores: { some: {} },
     },
     orderBy: { scrapedAt: "desc" },
-    take: options.limit ?? 50,
+    take: options.limit ?? DAILY_BATCH_SIZE,
     select: { id: true },
   });
 

@@ -64,7 +64,7 @@ export function getScrapeLimitEfficiencyTips(config: PipelineConfig): string[] {
       isGitHubSync
         ? "Skip extra GitHub sync triggers today — they will finish without saving new profiles and use Actions minutes."
         : "Skip additional sync runs today — they will stop immediately at the daily cap.",
-      "Work today's top-50 batch on the home page; counters reset at midnight (server timezone).",
+      `Work today's top-${config.dailyBatchSize} batch on the home page; counters reset at midnight (server timezone).`,
       "Need a higher cap? Raise DAILY_SCRAPE_LIMIT in GitHub Variables or env — keep it conservative to reduce LinkedIn risk.",
     ];
   }
@@ -89,8 +89,8 @@ export function getScrapeLimitEfficiencyTips(config: PipelineConfig): string[] {
       : "Morning: run complete pipeline once after sync (sync + enrich + score + batch).",
     isVercel
       ? `Vercel processes ${config.batchLimit} leads per enrich/score click — run complete pipeline multiple times if your backlog is large.`
-      : "Local runs can process larger batches per step (up to 50).",
+      : `Local runs can process larger batches per step (up to ${config.dailyBatchSize}).`,
     "Enable only your highest-intent SN lists in Settings → Lists so daily scrapes go to the right prospects.",
-    "Default cap is 50 profiles/day — enough for a full top-50 batch without aggressive scraping.",
+    `Default cap is ${config.dailyScrapeLimit} profiles/day — enough for a full top-${config.dailyBatchSize} batch without aggressive scraping.`,
   ];
 }

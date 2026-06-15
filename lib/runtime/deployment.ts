@@ -1,3 +1,4 @@
+import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
 import { isGitHubSyncConfigured } from "@/lib/github/trigger-sync";
 
 export type DeploymentPlatform = "vercel" | "local";
@@ -43,7 +44,7 @@ export function isGitHubSessionConfigured(): boolean {
 
 /** Smaller batches on Vercel to stay within Hobby function time limits. */
 export function getPipelineBatchLimit(): number {
-  return isVercelDeployment() ? 10 : 50;
+  return isVercelDeployment() ? 10 : DAILY_BATCH_SIZE;
 }
 
 export function envConfigHint(): string {

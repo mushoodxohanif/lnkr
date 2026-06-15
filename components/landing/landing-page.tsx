@@ -7,7 +7,6 @@ import {
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
-
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
 
 const features = [
   {
@@ -35,7 +35,7 @@ const features = [
   },
   {
     icon: UsersIcon,
-    title: "Daily top 50",
+    title: `Daily top ${DAILY_BATCH_SIZE}`,
     description:
       "Every weekday batch surfaces your highest-fit prospects so you focus outreach where it matters most.",
   },
@@ -195,7 +195,8 @@ export function LandingPage() {
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   Deploy to Vercel, sync your Sales Navigator lists, and open
-                  today&apos;s top 50 when the pipeline finishes.
+                  today&apos;s top {DAILY_BATCH_SIZE} when the pipeline
+                  finishes.
                 </p>
               </div>
               <Button asChild>

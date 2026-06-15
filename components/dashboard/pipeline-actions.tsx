@@ -248,7 +248,7 @@ function CompletePipelineButton({
                 </li>
               ) : null}
               {readiness.willRunBatch ? (
-                <li>• Build today&apos;s top-50 batch</li>
+                <li>• Build today&apos;s top-{config.dailyBatchSize} batch</li>
               ) : null}
             </ul>
           ) : null}
@@ -378,8 +378,7 @@ export function PipelineActions({
     {
       id: "rank",
       label: "Build today's batch",
-      description:
-        "Rank the top 50 and generate warming comments and connection notes.",
+      description: `Rank the top ${config.dailyBatchSize} and generate warming comments and connection notes.`,
       action: () => buildDailyBatch(false),
       disabled: !config.contentConfigured,
       disabledReason: `Set GOOGLE_GENERATIVE_AI_API_KEY first. ${envHint}`,

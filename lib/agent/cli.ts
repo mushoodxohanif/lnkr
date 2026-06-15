@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import {
+  DAILY_BATCH_SIZE,
   generateContentBatch,
   generateContentForLead,
   isContentGenerationConfigured,
@@ -12,7 +13,7 @@ function printUsage(): void {
   bun run generate:content --lead-id <id> [--force]
 
 Options:
-  --limit N     Max qualified leads to process (default: 50)
+  --limit N     Max qualified leads to process (default: ${DAILY_BATCH_SIZE})
   --force       Regenerate even when a draft already exists
   --lead-id ID  Generate content for a single lead
 `);

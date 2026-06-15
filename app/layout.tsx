@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
 import "./globals.css";
 
 /** Allow longer server actions on Vercel Pro; Hobby still caps at 10s. */
@@ -18,8 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "lnkr",
-  description:
-    "LinkedIn Sales Navigator outreach agent — draft-only, personalized daily top 50.",
+  description: `LinkedIn Sales Navigator outreach agent — draft-only, personalized daily top ${DAILY_BATCH_SIZE}.`,
 };
 
 export default function RootLayout({

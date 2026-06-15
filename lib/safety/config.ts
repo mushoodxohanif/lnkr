@@ -20,7 +20,7 @@ export function getSafetyConfig() {
   const browserProfileDir = getBrowserProfileDir();
 
   return {
-    dailyScrapeLimit: parsePositiveInt(process.env.DAILY_SCRAPE_LIMIT, 50),
+    dailyScrapeLimit: parsePositiveInt(process.env.DAILY_SCRAPE_LIMIT, 15),
     minDelayMs: parsePositiveInt(process.env.SCRAPE_MIN_DELAY_MS, 4000),
     maxDelayMs: parsePositiveInt(process.env.SCRAPE_MAX_DELAY_MS, 10000),
     maxPostsPerProfile: parsePositiveInt(process.env.MAX_POSTS_PER_PROFILE, 5),

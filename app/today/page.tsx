@@ -37,8 +37,8 @@ export default async function TodayPage() {
 
   return (
     <DashboardShell
-      title="Today's top 50"
-      description="Review fit scores, copy drafts, and track outreach manually. Nothing is sent automatically. Daily batch: top 50 qualified leads; sync capped at 50 profiles/day by default."
+      title={`Today's top ${pipelineConfig.dailyBatchSize}`}
+      description={`Review fit scores, copy drafts, and track outreach manually. Nothing is sent automatically. Daily batch: top ${pipelineConfig.dailyBatchSize} qualified leads; sync capped at ${pipelineConfig.dailyScrapeLimit} profiles/day by default.`}
       headerExtra={
         batch ? (
           <div className="text-right text-sm text-muted-foreground">

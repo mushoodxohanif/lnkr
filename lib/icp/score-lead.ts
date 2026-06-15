@@ -1,4 +1,5 @@
 import type { LeadStatus, Prisma } from "@/app/generated/prisma/client";
+import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
 import { db } from "@/lib/db";
 import { logScoringActivity } from "@/lib/icp/activity";
 import { isScoringConfigured } from "@/lib/icp/config";
@@ -173,7 +174,7 @@ export async function scoreLeadsBatch(
           }),
     },
     orderBy: { scrapedAt: "desc" },
-    take: options.limit ?? 50,
+    take: options.limit ?? DAILY_BATCH_SIZE,
     select: { id: true },
   });
 
