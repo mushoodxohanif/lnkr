@@ -10,10 +10,12 @@ import {
 function printUsage(): void {
   console.log(`Usage:
   bun run generate:content [--limit N] [--force]
+  bun run generate:content --all [--force]
   bun run generate:content --lead-id <id> [--force]
 
 Options:
   --limit N     Max qualified leads to process (default: ${DAILY_BATCH_SIZE})
+  --all         Process all scored leads (any status), backfilling incomplete drafts
   --force       Regenerate even when a draft already exists
   --lead-id ID  Generate content for a single lead
 `);
@@ -62,7 +64,14 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const result = await generateContentBatch({ forceRegenerate, limit });
+  const all = args.includes("--all");
+
+  const result = await generateContentBatch({
+    forceRegenerate,
+    limit,
+    all,
+    allowAnyStatus: all,
+  });
 
   console.log(
     `Processed ${result.processed}: ${result.generated} generated, ${result.skipped} skipped, ${result.errors} errors.`,

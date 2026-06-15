@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { DraftBlock } from "@/components/dashboard/draft-block";
 import { FitBadge } from "@/components/dashboard/fit-badge";
 import { LeadActions } from "@/components/dashboard/lead-actions";
 import { LeadNotesField } from "@/components/dashboard/lead-notes-field";
+import { OutreachDrafts } from "@/components/dashboard/outreach-drafts";
 import { StatusBadge } from "@/components/dashboard/status-badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -43,15 +41,7 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
   const enrichment = lead.enrichment;
 
   return (
-    <DashboardShell
-      title={lead.name}
-      description={[lead.title, lead.company].filter(Boolean).join(" at ")}
-      headerExtra={
-        <Button variant="link" size="sm" asChild className="h-auto p-0">
-          <Link href="/leads">← All leads</Link>
-        </Button>
-      }
-    >
+    <DashboardShell>
       <div className="space-y-6">
         <Card className="shadow-sm">
           <CardContent className="pt-(--card-spacing)">
@@ -303,7 +293,9 @@ export default async function LeadDetailPage({ params }: LeadDetailPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <DraftBlock
+            <OutreachDrafts
+              leadId={lead.id}
+              leadName={lead.name}
               warmingComment={lead.content?.warmingComment ?? null}
               connectionNote={lead.content?.connectionNote ?? null}
             />

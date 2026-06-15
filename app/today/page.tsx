@@ -13,7 +13,7 @@ import {
 import { getTodayBatch } from "@/lib/dashboard/queries";
 import { getPipelineConfig } from "@/lib/pipeline/status";
 
-function formatBatchDate(date: string): string {
+function _formatBatchDate(date: string): string {
   const parsed = new Date(`${date}T12:00:00.000Z`);
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -30,28 +30,13 @@ export default async function TodayPage() {
     getPipelineConfig(),
   ]);
 
-  const completedCount =
+  const _completedCount =
     batch?.leads.filter(
       (lead) => lead.status === "SENT" || lead.status === "SKIPPED",
     ).length ?? 0;
 
   return (
-    <DashboardShell
-      title={`Today's top ${pipelineConfig.dailyBatchSize}`}
-      description={`Review fit scores, copy drafts, and track outreach manually. Nothing is sent automatically. Daily batch: top ${pipelineConfig.dailyBatchSize} qualified leads; sync capped at ${pipelineConfig.dailyScrapeLimit} profiles/day by default.`}
-      headerExtra={
-        batch ? (
-          <div className="text-right text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">
-              {formatBatchDate(batch.date)}
-            </p>
-            <p className="mt-0.5 tabular-nums">
-              {batch.leadCount} leads · {completedCount} actioned
-            </p>
-          </div>
-        ) : null
-      }
-    >
+    <DashboardShell>
       {!batch || batch.leads.length === 0 ? (
         <Card className="border-dashed">
           <CardHeader className="text-center">

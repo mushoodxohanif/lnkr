@@ -1,48 +1,35 @@
 import { AppHeader } from "@/components/app-header";
+import { MaxWidthWrapper } from "@/components/max-width-wrapper";
 import { cn } from "@/lib/utils";
 
 type DashboardShellProps = {
-  title: string;
-  description?: string;
   children: React.ReactNode;
-  headerExtra?: React.ReactNode;
-  wide?: boolean;
+  /** Lock layout to the viewport so nested flex children can scroll internally. */
+  fillViewport?: boolean;
 };
 
 export function DashboardShell({
-  title,
-  description,
   children,
-  headerExtra,
-  wide = false,
+  fillViewport = false,
 }: DashboardShellProps) {
-  const containerClass = wide ? "max-w-7xl" : "max-w-5xl";
-
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <AppHeader containerClass={containerClass} />
+    <div
+      className={cn(
+        "flex flex-col bg-background",
+        fillViewport ? "h-dvh overflow-hidden" : "min-h-dvh",
+      )}
+    >
+      <AppHeader />
 
-      <main
+      <MaxWidthWrapper
+        as="main"
         className={cn(
-          "mx-auto flex w-full flex-1 flex-col px-6 py-8",
-          containerClass,
+          "flex flex-1 flex-col p-6",
+          fillViewport && "min-h-0 overflow-hidden",
         )}
       >
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              {title}
-            </h1>
-            {description ? (
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                {description}
-              </p>
-            ) : null}
-          </div>
-          {headerExtra}
-        </div>
         {children}
-      </main>
+      </MaxWidthWrapper>
     </div>
   );
 }

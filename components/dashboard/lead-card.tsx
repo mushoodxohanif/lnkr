@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { DraftBlock } from "@/components/dashboard/draft-block";
 import { FitBadge } from "@/components/dashboard/fit-badge";
 import { LeadActions } from "@/components/dashboard/lead-actions";
+import { OutreachDrafts } from "@/components/dashboard/outreach-drafts";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import {
   Card,
@@ -129,7 +129,9 @@ export function LeadCard({ lead }: LeadCardProps) {
               ) : null}
             </div>
 
-            <DraftBlock
+            <OutreachDrafts
+              leadId={lead.id}
+              leadName={lead.name}
               warmingComment={lead.content?.warmingComment ?? null}
               connectionNote={lead.content?.connectionNote ?? null}
             />

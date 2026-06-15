@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import { MaxWidthWrapper } from "@/components/max-width-wrapper";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
@@ -31,21 +31,12 @@ const NAV_ITEMS = [
   },
 ] as const;
 
-type AppHeaderProps = {
-  containerClass?: string;
-};
-
-export function AppHeader({ containerClass = "max-w-5xl" }: AppHeaderProps) {
+export function AppHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-border bg-background">
-      <div
-        className={cn(
-          "mx-auto flex items-center justify-between px-6 py-4",
-          containerClass,
-        )}
-      >
+    <header className="sticky top-0 z-50 shrink-0 border-b border-border bg-background">
+      <MaxWidthWrapper className="flex items-center justify-between px-6 py-4">
         <Link
           href="/"
           className="text-lg font-semibold tracking-tight text-foreground"
@@ -75,7 +66,7 @@ export function AppHeader({ containerClass = "max-w-5xl" }: AppHeaderProps) {
           })}
           <ModeToggle />
         </nav>
-      </div>
+      </MaxWidthWrapper>
     </header>
   );
 }

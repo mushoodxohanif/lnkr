@@ -3,19 +3,44 @@ import type { LeadStatus } from "@/app/generated/prisma/client";
 export const FINALIZED_LEAD_STATUSES: LeadStatus[] = [
   "NEW",
   "QUALIFIED",
+  "ARCHIVED",
   "SENT",
   "SKIPPED",
   "SNOOZED",
 ];
 
+export const QUALIFIED_STATUSES: LeadStatus[] = [
+  "QUALIFIED",
+  "SENT",
+  "SKIPPED",
+  "SNOOZED",
+];
+
+export type QualificationFilter = "ALL" | "QUALIFIED" | "UNQUALIFIED" | "NEW";
+
+export const QUALIFICATION_LABELS: Record<QualificationFilter, string> = {
+  ALL: "All leads",
+  QUALIFIED: "Qualified",
+  UNQUALIFIED: "Unqualified",
+  NEW: "Pending score",
+};
+
 export type FinalizedLeadsFilters = {
   search?: string;
   status?: LeadStatus | "ALL";
+  qualification?: QualificationFilter;
   snListSource?: string;
   minFit?: number;
   maxFit?: number;
   page?: number;
   pageSize?: number;
+};
+
+export type LeadCountStats = {
+  total: number;
+  qualified: number;
+  unqualified: number;
+  pendingScore: number;
 };
 
 export type FinalizedLeadRow = {
@@ -52,9 +77,17 @@ export function parseFinalizedLeadsFilters(
   };
 
   const status = get("status");
+  const qualification = get("qualification");
   const minFitRaw = get("minFit");
   const maxFitRaw = get("maxFit");
   const pageRaw = get("page");
+
+  const qualificationValues: QualificationFilter[] = [
+    "ALL",
+    "QUALIFIED",
+    "UNQUALIFIED",
+    "NEW",
+  ];
 
   return {
     search: get("search")?.trim() || undefined,
@@ -63,6 +96,11 @@ export function parseFinalizedLeadsFilters(
       (FINALIZED_LEAD_STATUSES.includes(status as LeadStatus) ||
         status === "ALL")
         ? (status as LeadStatus | "ALL")
+        : "ALL",
+    qualification:
+      qualification &&
+      qualificationValues.includes(qualification as QualificationFilter)
+        ? (qualification as QualificationFilter)
         : "ALL",
     snListSource: get("list") || "ALL",
     minFit:

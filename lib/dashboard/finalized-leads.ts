@@ -3,27 +3,42 @@ import type {
   FinalizedLeadRow,
   FinalizedLeadsFilters,
   FinalizedLeadsResult,
+  LeadCountStats,
 } from "@/lib/dashboard/finalized-leads-shared";
+import { QUALIFIED_STATUSES } from "@/lib/dashboard/finalized-leads-shared";
 import { db } from "@/lib/db";
 
 export type {
   FinalizedLeadRow,
   FinalizedLeadsFilters,
   FinalizedLeadsResult,
+  LeadCountStats,
+  QualificationFilter,
 } from "@/lib/dashboard/finalized-leads-shared";
 export {
   FINALIZED_LEAD_STATUSES,
   parseFinalizedLeadsFilters,
+  QUALIFICATION_LABELS,
+  QUALIFIED_STATUSES,
 } from "@/lib/dashboard/finalized-leads-shared";
 
+const SCRAPED_WHERE: Prisma.LeadWhereInput = {
+  scrapedAt: { not: null },
+};
+
 function buildWhere(filters: FinalizedLeadsFilters): Prisma.LeadWhereInput {
-  const where: Prisma.LeadWhereInput = {
-    status: { not: "ARCHIVED" },
-    scrapedAt: { not: null },
-  };
+  const where: Prisma.LeadWhereInput = { ...SCRAPED_WHERE };
 
   if (filters.status && filters.status !== "ALL") {
     where.status = filters.status;
+  } else if (filters.qualification && filters.qualification !== "ALL") {
+    if (filters.qualification === "QUALIFIED") {
+      where.status = { in: QUALIFIED_STATUSES };
+    } else if (filters.qualification === "UNQUALIFIED") {
+      where.status = "ARCHIVED";
+    } else if (filters.qualification === "NEW") {
+      where.status = "NEW";
+    }
   }
 
   if (filters.snListSource && filters.snListSource !== "ALL") {
@@ -114,6 +129,19 @@ const leadInclude = {
   },
 };
 
+export async function getLeadCountStats(): Promise<LeadCountStats> {
+  const [total, qualified, unqualified, pendingScore] = await Promise.all([
+    db.lead.count({ where: SCRAPED_WHERE }),
+    db.lead.count({
+      where: { ...SCRAPED_WHERE, status: { in: QUALIFIED_STATUSES } },
+    }),
+    db.lead.count({ where: { ...SCRAPED_WHERE, status: "ARCHIVED" } }),
+    db.lead.count({ where: { ...SCRAPED_WHERE, status: "NEW" } }),
+  ]);
+
+  return { total, qualified, unqualified, pendingScore };
+}
+
 export async function getFinalizedLeads(
   filters: FinalizedLeadsFilters = {},
 ): Promise<FinalizedLeadsResult> {
@@ -144,8 +172,7 @@ export async function getFinalizedLeads(
 export async function getFinalizedLeadListSources(): Promise<string[]> {
   const rows = await db.lead.findMany({
     where: {
-      status: { not: "ARCHIVED" },
-      scrapedAt: { not: null },
+      ...SCRAPED_WHERE,
       snListSource: { not: null },
     },
     select: { snListSource: true },

@@ -7,6 +7,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { MaxWidthWrapper } from "@/components/max-width-wrapper";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export function LandingPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="border-b border-border">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <MaxWidthWrapper className="flex items-center justify-between px-6 py-4">
           <Link
             href="/"
             className="text-lg font-semibold tracking-tight text-foreground"
@@ -94,11 +95,11 @@ export function LandingPage() {
               <Link href="/today">Get started</Link>
             </Button>
           </nav>
-        </div>
+        </MaxWidthWrapper>
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto max-w-5xl px-6 py-16 sm:py-24">
+        <MaxWidthWrapper as="section" className="px-6 py-16 sm:py-24">
           <div className="mx-auto max-w-3xl text-center">
             <Badge variant="secondary" className="mb-6">
               Draft-only · Human-in-the-loop
@@ -126,11 +127,11 @@ export function LandingPage() {
               </Button>
             </div>
           </div>
-        </section>
+        </MaxWidthWrapper>
 
         <Separator />
 
-        <section className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
+        <MaxWidthWrapper as="section" className="px-6 py-16 sm:py-20">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
               Everything you need for daily outreach
@@ -153,10 +154,10 @@ export function LandingPage() {
               </Card>
             ))}
           </div>
-        </section>
+        </MaxWidthWrapper>
 
         <section className="border-t border-border bg-muted/40">
-          <div className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
+          <MaxWidthWrapper className="px-6 py-16 sm:py-20">
             <div className="mx-auto max-w-2xl text-center">
               <h2 className="text-2xl font-semibold tracking-tight text-foreground">
                 How it works
@@ -180,10 +181,10 @@ export function LandingPage() {
                 </li>
               ))}
             </ol>
-          </div>
+          </MaxWidthWrapper>
         </section>
 
-        <section className="mx-auto max-w-5xl px-6 py-16 sm:py-20">
+        <MaxWidthWrapper as="section" className="px-6 py-16 sm:py-20">
           <Card>
             <CardContent className="flex flex-col items-center gap-6 py-10 text-center sm:flex-row sm:text-left">
               <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -207,11 +208,11 @@ export function LandingPage() {
               </Button>
             </CardContent>
           </Card>
-        </section>
+        </MaxWidthWrapper>
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-muted-foreground">
+        <MaxWidthWrapper className="flex flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-muted-foreground">
           <p>lnkr — GPL v3. Use at your own risk.</p>
           <div className="flex items-center gap-4">
             <Link
@@ -227,7 +228,7 @@ export function LandingPage() {
               Settings
             </Link>
           </div>
-        </div>
+        </MaxWidthWrapper>
       </footer>
     </div>
   );

@@ -5,35 +5,140 @@ import {
   DAILY_BATCH_SIZE,
   isContentGenerationConfigured,
 } from "@/lib/agent/config";
-import { generateLeadContent } from "@/lib/agent/content-generator";
+import {
+  generateConnectionNote,
+  generateLeadContent,
+  generateWarmingComment,
+  hasWarmingCommentSource,
+} from "@/lib/agent/content-generator";
 import { loadContentContext } from "@/lib/agent/context";
 import type {
+  ContentContext,
   GenerateContentBatchResult,
   GenerateContentResult,
+  GeneratedLeadContent,
 } from "@/lib/agent/types";
 import { db } from "@/lib/db";
 
 export type GenerateContentOptions = {
   forceRegenerate?: boolean;
+  /** Generate for any scored lead, not only QUALIFIED. */
+  allowAnyStatus?: boolean;
 };
+
+type DraftContent = {
+  warmingComment: string | null;
+  connectionNote: string | null;
+  painPoints?: string[];
+  personalizationHooks?: string[];
+};
+
+function isDraftComplete(
+  draft: DraftContent,
+  context: Awaited<ReturnType<typeof loadContentContext>>,
+): boolean {
+  if (!draft.connectionNote) {
+    return false;
+  }
+
+  if (!draft.warmingComment && context && hasWarmingCommentSource(context)) {
+    return false;
+  }
+
+  return true;
+}
 
 async function persistGeneratedContent(
   leadId: string,
-  content: Awaited<ReturnType<typeof generateLeadContent>>,
+  content: DraftContent,
+  existingDraftId?: string | null,
 ): Promise<string> {
+  const connectionNote = content.connectionNote ?? null;
+  const data = {
+    warmingComment: content.warmingComment,
+    connectionNote,
+    ...(content.painPoints
+      ? { painPoints: content.painPoints as Prisma.InputJsonValue }
+      : {}),
+    ...(content.personalizationHooks
+      ? {
+          personalizationHooks:
+            content.personalizationHooks as Prisma.InputJsonValue,
+        }
+      : {}),
+    status: "DRAFT" as const,
+  };
+
+  if (existingDraftId) {
+    await db.generatedContent.update({
+      where: { id: existingDraftId },
+      data,
+    });
+    return existingDraftId;
+  }
+
+  const existingDraft = await db.generatedContent.findFirst({
+    where: { leadId, status: "DRAFT" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+
+  if (existingDraft) {
+    await db.generatedContent.update({
+      where: { id: existingDraft.id },
+      data,
+    });
+    return existingDraft.id;
+  }
+
   const record = await db.generatedContent.create({
     data: {
       leadId,
-      warmingComment: content.warmingComment,
-      connectionNote: content.connectionNote,
-      painPoints: content.painPoints as Prisma.InputJsonValue,
-      personalizationHooks:
-        content.personalizationHooks as Prisma.InputJsonValue,
-      status: "DRAFT",
+      ...data,
+      painPoints: (content.painPoints ?? []) as Prisma.InputJsonValue,
+      personalizationHooks: (content.personalizationHooks ??
+        []) as Prisma.InputJsonValue,
     },
   });
 
   return record.id;
+}
+
+async function backfillDraftContent(
+  context: ContentContext,
+  existing: DraftContent,
+): Promise<GeneratedLeadContent> {
+  let warmingComment = existing.warmingComment;
+  let connectionNote = existing.connectionNote ?? "";
+  let personalizationHooks: string[] = existing.personalizationHooks ?? [];
+  let referencedPostDetail: string | undefined;
+  let insightHook: string | undefined;
+
+  if (!connectionNote) {
+    const connectionResult = await generateConnectionNote(context);
+    connectionNote = connectionResult.connection_note;
+    personalizationHooks = connectionResult.personalization_hooks;
+    insightHook = connectionResult.insight_hook;
+  }
+
+  if (!warmingComment && hasWarmingCommentSource(context)) {
+    const warmingResult = await generateWarmingComment(context);
+    warmingComment = warmingResult?.comment ?? null;
+    referencedPostDetail = warmingResult?.referenced_detail;
+  }
+
+  const painPoints = (context.score.painPoints as string[]).filter(
+    (point) => point.trim().length > 0,
+  );
+
+  return {
+    warmingComment,
+    connectionNote,
+    painPoints,
+    personalizationHooks,
+    referencedPostDetail,
+    insightHook,
+  };
 }
 
 export async function generateContentForLead(
@@ -62,29 +167,12 @@ export async function generateContentForLead(
     };
   }
 
-  if (lead.status !== "QUALIFIED") {
+  if (lead.status !== "QUALIFIED" && !options.allowAnyStatus) {
     return {
       leadId,
       status: "skipped",
       message: `Lead status is ${lead.status}. Only QUALIFIED leads get content drafts.`,
     };
-  }
-
-  if (!options.forceRegenerate) {
-    const existingDraft = await db.generatedContent.findFirst({
-      where: { leadId, status: "DRAFT" },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (existingDraft) {
-      return {
-        leadId,
-        status: "skipped",
-        generatedContentId: existingDraft.id,
-        message:
-          "Draft content already exists. Use forceRegenerate to replace.",
-      };
-    }
   }
 
   const context = await loadContentContext(leadId);
@@ -97,9 +185,49 @@ export async function generateContentForLead(
     };
   }
 
+  const existingDraft = await db.generatedContent.findFirst({
+    where: { leadId, status: "DRAFT" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (existingDraft && !options.forceRegenerate) {
+    const existingContent: DraftContent = {
+      warmingComment: existingDraft.warmingComment,
+      connectionNote: existingDraft.connectionNote,
+      painPoints: existingDraft.painPoints as string[] | undefined,
+      personalizationHooks: existingDraft.personalizationHooks as
+        | string[]
+        | undefined,
+    };
+
+    if (isDraftComplete(existingContent, context)) {
+      return {
+        leadId,
+        status: "skipped",
+        generatedContentId: existingDraft.id,
+        message: "Draft content is already complete.",
+      };
+    }
+  }
+
   try {
-    const content = await generateLeadContent(context);
-    const generatedContentId = await persistGeneratedContent(leadId, content);
+    const content =
+      existingDraft && !options.forceRegenerate
+        ? await backfillDraftContent(context, {
+            warmingComment: existingDraft.warmingComment,
+            connectionNote: existingDraft.connectionNote,
+            painPoints: existingDraft.painPoints as string[] | undefined,
+            personalizationHooks: existingDraft.personalizationHooks as
+              | string[]
+              | undefined,
+          })
+        : await generateLeadContent(context);
+
+    const generatedContentId = await persistGeneratedContent(
+      leadId,
+      content,
+      options.forceRegenerate ? null : existingDraft?.id,
+    );
 
     await logContentActivity(
       "generate_content",
@@ -142,6 +270,10 @@ export type GenerateContentBatchOptions = {
   limit?: number;
   statuses?: LeadStatus[];
   leadIds?: string[];
+  /** Process all scored leads regardless of status. */
+  allowAnyStatus?: boolean;
+  /** Process every scored lead (no default batch size cap). */
+  all?: boolean;
 };
 
 async function processBatch(
@@ -171,6 +303,7 @@ export async function generateContentBatch(
   if (options.leadIds?.length) {
     const results = await processBatch(options.leadIds, {
       forceRegenerate: options.forceRegenerate,
+      allowAnyStatus: options.allowAnyStatus,
     });
 
     let generated = 0;
@@ -213,24 +346,22 @@ export async function generateContentBatch(
 
   const leads = await db.lead.findMany({
     where: {
-      status: { in: statuses },
-      ...(options.forceRegenerate
-        ? {}
-        : {
-            generatedContent: {
-              none: { status: "DRAFT" },
-            },
-          }),
+      ...(options.allowAnyStatus ? {} : { status: { in: statuses } }),
       scores: { some: {} },
     },
     orderBy: { scrapedAt: "desc" },
-    take: options.limit ?? DAILY_BATCH_SIZE,
+    ...(options.all || options.limit
+      ? { take: options.all ? undefined : options.limit }
+      : { take: DAILY_BATCH_SIZE }),
     select: { id: true },
   });
 
   const results = await processBatch(
     leads.map((lead) => lead.id),
-    { forceRegenerate: options.forceRegenerate },
+    {
+      forceRegenerate: options.forceRegenerate,
+      allowAnyStatus: options.allowAnyStatus,
+    },
   );
 
   let generated = 0;

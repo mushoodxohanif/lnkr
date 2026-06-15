@@ -5,6 +5,7 @@ import { FinalizedLeadsPanel } from "@/components/dashboard/finalized-leads-pane
 import {
   getFinalizedLeadListSources,
   getFinalizedLeads,
+  getLeadCountStats,
   parseFinalizedLeadsFilters,
 } from "@/lib/dashboard/finalized-leads";
 
@@ -17,20 +18,18 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   const params = await searchParams;
   const filters = parseFinalizedLeadsFilters(params);
 
-  const [result, listSources] = await Promise.all([
+  const [result, listSources, stats] = await Promise.all([
     getFinalizedLeads(filters),
     getFinalizedLeadListSources(),
+    getLeadCountStats(),
   ]);
 
   return (
-    <DashboardShell
-      wide
-      title="All leads"
-      description="All scraped leads from Sales Navigator — filter by status, add notes, and export to CSV."
-    >
+    <DashboardShell fillViewport>
       <Suspense fallback={null}>
         <FinalizedLeadsPanel
           result={result}
+          stats={stats}
           listSources={listSources}
           filters={filters}
         />

@@ -1,4 +1,5 @@
 import { AppHeader } from "@/components/app-header";
+import { MaxWidthWrapper } from "@/components/max-width-wrapper";
 import { SettingsNav } from "@/components/settings/settings-nav";
 
 type SettingsShellProps = {
@@ -14,9 +15,9 @@ export function SettingsShell({
 }: SettingsShellProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <AppHeader containerClass="max-w-6xl" />
+      <AppHeader />
 
-      <div className="mx-auto grid w-full max-w-6xl flex-1 gap-8 px-6 py-8 lg:grid-cols-[220px_1fr]">
+      <MaxWidthWrapper className="grid flex-1 gap-8 px-6 py-8 lg:grid-cols-[220px_1fr]">
         <SettingsNav />
 
         <main>
@@ -30,7 +31,7 @@ export function SettingsShell({
           </div>
           {children}
         </main>
-      </div>
+      </MaxWidthWrapper>
     </div>
   );
 }

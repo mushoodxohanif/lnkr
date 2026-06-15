@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { LeadNotesField } from "@/components/dashboard/lead-notes-field";
+import { LeadRowActions } from "@/components/dashboard/lead-row-actions";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  type ColumnDef,
+  DataTable,
+  getCoreRowModel,
+  useReactTable,
+} from "@/components/ui/data-table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,21 +31,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { exportFinalizedLeadsCsvAction } from "@/lib/dashboard/actions";
 import {
   FINALIZED_LEAD_STATUSES,
   type FinalizedLeadRow,
   type FinalizedLeadsFilters,
+  type LeadCountStats,
+  QUALIFICATION_LABELS,
+  type QualificationFilter,
 } from "@/lib/dashboard/finalized-leads-shared";
 import { STATUS_LABELS } from "@/lib/dashboard/lead-status";
+import { cn } from "@/lib/utils";
 
 function formatDate(value: Date | null): string {
   if (!value) return "—";
@@ -48,6 +52,93 @@ function formatDate(value: Date | null): string {
   }).format(value);
 }
 
+const leadColumns: ColumnDef<FinalizedLeadRow>[] = [
+  {
+    id: "lead",
+    header: "Lead",
+    cell: ({ row }) => {
+      const lead = row.original;
+      return (
+        <>
+          <Link
+            href={`/leads/${lead.id}`}
+            className="font-medium text-foreground hover:text-primary"
+          >
+            {lead.name}
+          </Link>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {[lead.title, lead.company].filter(Boolean).join(" · ") || "—"}
+          </p>
+          {lead.location ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {lead.location}
+            </p>
+          ) : null}
+        </>
+      );
+    },
+  },
+  {
+    id: "fit",
+    header: "Fit",
+    cell: ({ row }) => {
+      const lead = row.original;
+      if (lead.fitPercent === null) return "—";
+
+      return (
+        <>
+          {Math.round(lead.fitPercent)}%
+          {lead.timingSignal ? (
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              {lead.timingSignal}
+            </span>
+          ) : null}
+        </>
+      );
+    },
+  },
+  {
+    id: "status",
+    header: "Status",
+    cell: ({ row }) => <StatusBadge status={row.original.status} alwaysShow />,
+  },
+  {
+    id: "list",
+    header: "List",
+    cell: ({ row }) => (
+      <span className="block max-w-32 truncate text-xs text-muted-foreground">
+        {row.original.snListSource ?? "—"}
+      </span>
+    ),
+  },
+  {
+    id: "scraped",
+    header: "Scraped",
+    cell: ({ row }) => (
+      <span className="text-xs text-muted-foreground">
+        {formatDate(row.original.scrapedAt)}
+      </span>
+    ),
+  },
+  {
+    id: "notes",
+    header: "Notes",
+    cell: ({ row }) => (
+      <LeadNotesField
+        leadId={row.original.id}
+        initialNotes={row.original.notes}
+        compact
+        rows={2}
+      />
+    ),
+  },
+  {
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row }) => <LeadRowActions lead={row.original} />,
+  },
+];
+
 type FinalizedLeadsPanelProps = {
   result: {
     leads: FinalizedLeadRow[];
@@ -56,12 +147,45 @@ type FinalizedLeadsPanelProps = {
     pageSize: number;
     totalPages: number;
   };
+  stats: LeadCountStats;
   listSources: string[];
   filters: FinalizedLeadsFilters;
 };
 
+function StatCard({
+  label,
+  value,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const Component = onClick ? "button" : "div";
+
+  return (
+    <Component
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={cn(
+        "rounded-lg border bg-card px-4 py-3 text-left shadow-xs transition",
+        onClick && "cursor-pointer hover:border-primary/40 hover:bg-accent/30",
+        active && "border-primary ring-1 ring-primary/20",
+      )}
+    >
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+    </Component>
+  );
+}
+
 export function FinalizedLeadsPanel({
   result,
+  stats,
   listSources,
   filters,
 }: FinalizedLeadsPanelProps) {
@@ -70,10 +194,26 @@ export function FinalizedLeadsPanel({
   const [exportPending, startExport] = useTransition();
   const [exportError, setExportError] = useState<string | null>(null);
 
+  const table = useReactTable({
+    data: result.leads,
+    columns: leadColumns,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    pageCount: result.totalPages,
+    rowCount: result.total,
+    state: {
+      pagination: {
+        pageIndex: result.page - 1,
+        pageSize: result.pageSize,
+      },
+    },
+  });
+
   const filterState = useMemo(
     () => ({
       search: filters.search ?? "",
       status: filters.status ?? "ALL",
+      qualification: filters.qualification ?? "ALL",
       list: filters.snListSource ?? "ALL",
       minFit: filters.minFit?.toString() ?? "",
       maxFit: filters.maxFit?.toString() ?? "",
@@ -87,6 +227,7 @@ export function FinalizedLeadsPanel({
     next: Partial<{
       search: string;
       status: string;
+      qualification: string;
       list: string;
       minFit: string;
       maxFit: string;
@@ -97,6 +238,8 @@ export function FinalizedLeadsPanel({
 
     if (merged.search.trim()) params.set("search", merged.search.trim());
     if (merged.status !== "ALL") params.set("status", merged.status);
+    if (merged.qualification !== "ALL")
+      params.set("qualification", merged.qualification);
     if (merged.list !== "ALL") params.set("list", merged.list);
     if (merged.minFit) params.set("minFit", merged.minFit);
     if (merged.maxFit) params.set("maxFit", merged.maxFit);
@@ -105,7 +248,23 @@ export function FinalizedLeadsPanel({
     router.push(query ? `/leads?${query}` : "/leads");
   }
 
-  function goToPage(page: number) {
+  function applyQualificationFilter(qualification: QualificationFilter) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
+    params.delete("status");
+
+    if (qualification === "ALL") {
+      params.delete("qualification");
+    } else {
+      params.set("qualification", qualification);
+    }
+
+    const query = params.toString();
+    router.push(query ? `/leads?${query}` : "/leads");
+  }
+
+  function goToPage(pageIndex: number) {
+    const page = pageIndex + 1;
     const params = new URLSearchParams(searchParams.toString());
     if (page <= 1) {
       params.delete("page");
@@ -135,8 +294,37 @@ export function FinalizedLeadsPanel({
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="shadow-sm">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+      <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Total leads"
+          value={stats.total}
+          active={
+            filterState.qualification === "ALL" && filterState.status === "ALL"
+          }
+          onClick={() => applyQualificationFilter("ALL")}
+        />
+        <StatCard
+          label="Qualified"
+          value={stats.qualified}
+          active={filterState.qualification === "QUALIFIED"}
+          onClick={() => applyQualificationFilter("QUALIFIED")}
+        />
+        <StatCard
+          label="Unqualified"
+          value={stats.unqualified}
+          active={filterState.qualification === "UNQUALIFIED"}
+          onClick={() => applyQualificationFilter("UNQUALIFIED")}
+        />
+        <StatCard
+          label="Pending score"
+          value={stats.pendingScore}
+          active={filterState.qualification === "NEW"}
+          onClick={() => applyQualificationFilter("NEW")}
+        />
+      </div>
+
+      <Card className="shrink-0 shadow-sm pt-0">
         <CardContent className="pt-(--card-spacing)">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-48 flex-1 space-y-1.5">
@@ -156,6 +344,32 @@ export function FinalizedLeadsPanel({
             </div>
 
             <div className="space-y-1.5">
+              <Label>Qualification</Label>
+              <Select
+                value={filterState.qualification}
+                onValueChange={(value) =>
+                  applyFilters({ qualification: value, status: "ALL" })
+                }
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="All leads" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    Object.entries(QUALIFICATION_LABELS) as [
+                      QualificationFilter,
+                      string,
+                    ][]
+                  ).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label>Status</Label>
               <Select
                 value={filterState.status}
@@ -166,14 +380,11 @@ export function FinalizedLeadsPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">All statuses</SelectItem>
-                  <SelectItem value="NEW">New (pending score)</SelectItem>
-                  {FINALIZED_LEAD_STATUSES.filter((s) => s !== "NEW").map(
-                    (status) => (
-                      <SelectItem key={status} value={status}>
-                        {STATUS_LABELS[status]}
-                      </SelectItem>
-                    ),
-                  )}
+                  {FINALIZED_LEAD_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {STATUS_LABELS[status]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -248,11 +459,6 @@ export function FinalizedLeadsPanel({
               <AlertDescription>{exportError}</AlertDescription>
             </Alert>
           ) : null}
-
-          <CardDescription className="mt-3">
-            {result.total} finalized lead{result.total === 1 ? "" : "s"} · page{" "}
-            {result.page} of {result.totalPages}
-          </CardDescription>
         </CardContent>
       </Card>
 
@@ -266,115 +472,20 @@ export function FinalizedLeadsPanel({
           </CardHeader>
         </Card>
       ) : (
-        <Card className="shadow-sm">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
-                  Lead
-                </TableHead>
-                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
-                  Fit
-                </TableHead>
-                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
-                  Status
-                </TableHead>
-                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
-                  List
-                </TableHead>
-                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
-                  Scraped
-                </TableHead>
-                <TableHead className="px-3 text-xs font-semibold uppercase tracking-wide">
-                  Notes
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {result.leads.map((lead) => (
-                <TableRow key={lead.id} className="align-top">
-                  <TableCell className="px-3 py-3 whitespace-normal">
-                    <Link
-                      href={`/leads/${lead.id}`}
-                      className="font-medium text-foreground hover:text-primary"
-                    >
-                      {lead.name}
-                    </Link>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {[lead.title, lead.company].filter(Boolean).join(" · ") ||
-                        "—"}
-                    </p>
-                    {lead.location ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {lead.location}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="px-3 py-3 tabular-nums whitespace-normal">
-                    {lead.fitPercent !== null ? (
-                      <>
-                        {Math.round(lead.fitPercent)}%
-                        {lead.timingSignal ? (
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
-                            {lead.timingSignal}
-                          </span>
-                        ) : null}
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="px-3 py-3">
-                    <StatusBadge status={lead.status} alwaysShow />
-                  </TableCell>
-                  <TableCell className="max-w-32 truncate px-3 py-3 text-xs text-muted-foreground">
-                    {lead.snListSource ?? "—"}
-                  </TableCell>
-                  <TableCell className="px-3 py-3 text-xs text-muted-foreground">
-                    {formatDate(lead.scrapedAt)}
-                  </TableCell>
-                  <TableCell className="px-3 py-3 whitespace-normal">
-                    <LeadNotesField
-                      leadId={lead.id}
-                      initialNotes={lead.notes}
-                      compact
-                      rows={2}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0 shadow-sm">
+          <DataTable
+            table={table}
+            emptyMessage="No leads match."
+            className="min-h-0 flex-1 rounded-none border-0"
+          />
+          <DataTablePagination
+            table={table}
+            totalRows={result.total}
+            onPageChange={goToPage}
+            className="shrink-0"
+          />
         </Card>
       )}
-
-      {result.totalPages > 1 ? (
-        <Card className="shadow-sm">
-          <CardContent className="flex items-center justify-between py-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={result.page <= 1}
-              onClick={() => goToPage(result.page - 1)}
-            >
-              Previous
-            </Button>
-            <span className="text-sm tabular-nums text-muted-foreground">
-              Page {result.page} of {result.totalPages}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={result.page >= result.totalPages}
-              onClick={() => goToPage(result.page + 1)}
-            >
-              Next
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }

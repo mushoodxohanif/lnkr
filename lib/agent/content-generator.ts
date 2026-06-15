@@ -37,15 +37,55 @@ export function enforceConnectionNoteLimit(note: string): string {
   return `${truncated.trim()}…`;
 }
 
+export function hasWarmingCommentSource(context: ContentContext): boolean {
+  if (context.recentPosts.length > 0) {
+    return true;
+  }
+
+  const snapshot = context.lead.rawProfileSnapshot as {
+    about?: string;
+    description?: string;
+  } | null;
+
+  const fallbackText =
+    snapshot?.about?.trim() || snapshot?.description?.trim() || "";
+
+  return fallbackText.length >= 20;
+}
+
+function getWarmingCommentContext(context: ContentContext): ContentContext {
+  if (context.recentPosts.length > 0) {
+    return context;
+  }
+
+  const snapshot = context.lead.rawProfileSnapshot as {
+    about?: string;
+    description?: string;
+  } | null;
+
+  const fallbackText =
+    snapshot?.about?.trim() || snapshot?.description?.trim() || "";
+
+  if (fallbackText.length < 20) {
+    return context;
+  }
+
+  return {
+    ...context,
+    recentPosts: [{ text: fallbackText }],
+  };
+}
+
 export async function generateWarmingComment(
   context: ContentContext,
 ): Promise<WarmingCommentOutput | null> {
-  if (context.recentPosts.length === 0) {
+  const warmingContext = getWarmingCommentContext(context);
+  if (warmingContext.recentPosts.length === 0) {
     return null;
   }
 
   const prompt = await appendCustomInstructions(
-    buildWarmingCommentPrompt(context),
+    buildWarmingCommentPrompt(warmingContext),
     "warming_comment",
   );
 
