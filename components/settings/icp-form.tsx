@@ -231,6 +231,18 @@ export function ICPForm({ initialData }: ICPFormProps) {
                 }
                 placeholder="e.g. Staffing"
               />
+              <TagInput
+                label="Excluded profile keywords"
+                hint="Partial match against the profile About and Description sections."
+                values={exclusionRules.profileKeywords ?? []}
+                onChange={(values) =>
+                  setExclusionRules({
+                    ...exclusionRules,
+                    profileKeywords: values,
+                  })
+                }
+                placeholder="e.g. Open to work"
+              />
               <div className="flex items-center gap-3">
                 <Checkbox
                   id="exclude-agencies"

@@ -16,6 +16,12 @@ export type ScoreLeadOptions = {
   forceRescore?: boolean;
 };
 
+const SCORING_DELAY_MS = 750;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function resolveLeadStatus(
   fitPercent: number,
   threshold: number,
@@ -134,6 +140,7 @@ export async function scoreLead(
       timingSignal: hybridScore.timingSignal,
       status,
       skipLlm: options.skipLlm ?? false,
+      ruleOnlyFallback: hybridScore.ruleOnlyFallback ?? false,
     });
 
     return {
@@ -141,6 +148,7 @@ export async function scoreLead(
       status: status === "ARCHIVED" ? "archived" : "scored",
       fitPercent: hybridScore.fitPercent,
       leadScoreId,
+      ruleOnlyFallback: hybridScore.ruleOnlyFallback,
     };
   } catch (error) {
     const message =
@@ -183,14 +191,26 @@ export async function scoreLeadsBatch(
   let archived = 0;
   let skipped = 0;
   let errors = 0;
+  let ruleOnlyFallbacks = 0;
+  const useLlm = !options.skipLlm && isScoringConfigured();
 
-  for (const lead of leads) {
+  for (let index = 0; index < leads.length; index += 1) {
+    const lead = leads[index];
+
+    if (index > 0 && useLlm) {
+      await sleep(SCORING_DELAY_MS);
+    }
+
     try {
       const result = await scoreLead(lead.id, {
         skipLlm: options.skipLlm,
         forceRescore: options.forceRescore,
       });
       results.push(result);
+
+      if (result.ruleOnlyFallback) {
+        ruleOnlyFallbacks += 1;
+      }
 
       switch (result.status) {
         case "scored":
@@ -220,10 +240,32 @@ export async function scoreLeadsBatch(
     archived,
     skipped,
     errors,
+    ruleOnlyFallbacks,
     results,
   };
 
   await logScoringActivity("score_batch", "Lead", undefined, summary);
 
   return summary;
+}
+
+export function formatScoringBatchMessage(
+  result: ScoreLeadsBatchResult,
+): string {
+  const parts = [
+    "Scoring finished",
+    `${result.scored} scored`,
+    `${result.archived} archived`,
+    `${result.skipped} skipped`,
+  ];
+
+  if (result.ruleOnlyFallbacks > 0) {
+    parts.push(`${result.ruleOnlyFallbacks} rule-only (LLM unavailable)`);
+  }
+
+  if (result.errors > 0) {
+    parts.push(`${result.errors} errors`);
+  }
+
+  return parts.join(" · ");
 }

@@ -7,6 +7,7 @@ export type ExclusionRules = {
   competitors?: string[];
   titles?: string[];
   industries?: string[];
+  profileKeywords?: string[];
   agencies?: boolean;
 };
 
@@ -114,6 +115,7 @@ export function parseExclusionRules(value: unknown): ExclusionRules {
     competitors: parseStringArray(rules.competitors),
     titles: parseStringArray(rules.titles),
     industries: parseStringArray(rules.industries),
+    profileKeywords: parseStringArray(rules.profileKeywords),
     agencies: typeof rules.agencies === "boolean" ? rules.agencies : false,
   };
 }

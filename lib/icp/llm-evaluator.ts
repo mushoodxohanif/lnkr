@@ -17,6 +17,7 @@ export async function evaluateLeadWithLLM(
     model: flashModel,
     schema: leadScoreSchema,
     prompt,
+    maxRetries: 5,
   });
 
   return object;

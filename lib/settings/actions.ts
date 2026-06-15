@@ -169,6 +169,7 @@ export async function saveICPCriteria(
     competitors: normalizeTagList(exclusionRulesRaw.competitors ?? []),
     titles: normalizeTagList(exclusionRulesRaw.titles ?? []),
     industries: normalizeTagList(exclusionRulesRaw.industries ?? []),
+    profileKeywords: normalizeTagList(exclusionRulesRaw.profileKeywords ?? []),
   };
   const weights = parseWeights(
     JSON.parse(String(formData.get("weights") ?? "{}")),

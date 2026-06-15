@@ -84,6 +84,7 @@ export type HybridScoreResult = {
   ruleFitPercent: number;
   llmFitPercent: number | null;
   hardDisqualified: boolean;
+  ruleOnlyFallback?: boolean;
 };
 
 export type ScoreLeadResult = {
@@ -92,6 +93,7 @@ export type ScoreLeadResult = {
   fitPercent?: number;
   leadScoreId?: string;
   message?: string;
+  ruleOnlyFallback?: boolean;
 };
 
 export type ScoreLeadsBatchResult = {
@@ -100,5 +102,6 @@ export type ScoreLeadsBatchResult = {
   archived: number;
   skipped: number;
   errors: number;
+  ruleOnlyFallbacks: number;
   results: ScoreLeadResult[];
 };

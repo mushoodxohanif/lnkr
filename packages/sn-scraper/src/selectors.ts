@@ -107,6 +107,28 @@ export const SELECTORS = {
     'a[href*="/company/"]',
     '[data-anonymize="company-name"]',
   ],
+  profileAboutSection: [
+    "#about",
+    'section[data-section="summary"]',
+    '[componentkey*="About"]',
+  ],
+  profileAboutText: [
+    '[data-anonymize="about"]',
+    '[data-anonymize="summary"]',
+    '[data-anonymize="person-blurb"]',
+    "#about .inline-show-more-text",
+    "#about .pv-shared-text-with-see-more span[aria-hidden='true']",
+    'section[data-section="summary"] .inline-show-more-text',
+    'section[data-section="summary"] .pv-shared-text-with-see-more',
+    "#about span[dir]",
+  ],
+  profileExperienceDescription: [
+    '[data-anonymize="job-description"]',
+    '[data-anonymize="position-description"]',
+    ".pvs-list__outer-container .inline-show-more-text",
+    ".pvs-list__outer-container .pv-shared-text-with-see-more span[aria-hidden='true']",
+    ".pvs-entity__sub-components .inline-show-more-text",
+  ],
 } as const;
 
 export async function findFirstVisible(

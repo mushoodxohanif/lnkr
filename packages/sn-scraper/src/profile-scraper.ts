@@ -88,6 +88,114 @@ async function extractTitleFromExperience(
   return firstLine || undefined;
 }
 
+async function expandSeeMoreInSection(
+  _page: Page,
+  section: import("playwright").Locator,
+): Promise<void> {
+  const seeMore = section
+    .locator(
+      'button:has-text("see more"), button:has-text("…see more"), button.inline-show-more-text__button',
+    )
+    .first();
+
+  if ((await seeMore.count()) === 0) return;
+
+  try {
+    await seeMore.click({ timeout: 1000 });
+    await humanDelay(300, 600);
+  } catch {
+    // best-effort expand
+  }
+}
+
+async function extractSectionByHeading(
+  page: Page,
+  headings: string[],
+): Promise<string | undefined> {
+  const text = await page.evaluate((labels) => {
+    const normalizedLabels = labels.map((label) => label.toLowerCase());
+
+    for (const heading of document.querySelectorAll("h2, h3, span, div")) {
+      const label = heading.textContent?.trim().toLowerCase();
+      if (!label || !normalizedLabels.includes(label)) continue;
+
+      const section =
+        heading.closest("section") ??
+        heading.parentElement?.parentElement ??
+        heading.parentElement;
+      if (!section) continue;
+
+      const body = section.textContent?.trim();
+      if (!body || body.length <= label.length + 5) continue;
+
+      return body.slice(label.length).trim();
+    }
+
+    return undefined;
+  }, headings);
+
+  return text || undefined;
+}
+
+async function extractProfileAbout(page: Page): Promise<string | undefined> {
+  for (const selector of SELECTORS.profileAboutText) {
+    const textEl = page.locator(selector).first();
+    if ((await textEl.count()) === 0) continue;
+
+    const text = (await textEl.innerText()).trim();
+    if (text) return text;
+  }
+
+  const aboutSection = await findFirstVisible(
+    page,
+    SELECTORS.profileAboutSection,
+  );
+  if (aboutSection) {
+    await expandSeeMoreInSection(page, aboutSection);
+
+    for (const selector of SELECTORS.profileAboutText) {
+      const textEl = aboutSection.locator(selector).first();
+      if ((await textEl.count()) === 0) continue;
+
+      const text = (await textEl.innerText()).trim();
+      if (text) return text;
+    }
+
+    const fallback = (await aboutSection.innerText()).trim();
+    if (fallback) return fallback;
+  }
+
+  return extractSectionByHeading(page, ["About", "Summary"]);
+}
+
+async function extractExperienceDescriptions(
+  page: Page,
+): Promise<string | undefined> {
+  const experience = await findFirstVisible(page, SELECTORS.profileExperience);
+  if (!experience) return undefined;
+
+  await expandSeeMoreInSection(page, experience);
+
+  const descriptions: string[] = [];
+
+  for (const selector of SELECTORS.profileExperienceDescription) {
+    const items = experience.locator(selector);
+    const count = await items.count();
+    if (count === 0) continue;
+
+    for (let i = 0; i < count; i++) {
+      const text = (await items.nth(i).innerText()).trim();
+      if (text.length > 20) {
+        descriptions.push(text);
+      }
+    }
+
+    if (descriptions.length > 0) break;
+  }
+
+  return descriptions.length > 0 ? descriptions.join("\n\n") : undefined;
+}
+
 export async function enrichLeadFromProfile(
   page: Page,
   lead: ScrapedLead,
@@ -111,6 +219,8 @@ export async function enrichLeadFromProfile(
   const title = lead.title ?? (await extractTitleFromExperience(page));
   const recentPosts = await extractRecentPosts(page, maxPosts);
   const companySnippet = await extractCompanySnippet(page);
+  const about = await extractProfileAbout(page);
+  const description = await extractExperienceDescriptions(page);
 
   const company =
     lead.company ??
@@ -133,6 +243,8 @@ export async function enrichLeadFromProfile(
       title,
       company,
       location,
+      about,
+      description,
       postCount: recentPosts.length,
     },
   };

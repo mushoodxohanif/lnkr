@@ -24,6 +24,7 @@ export {
   timingSignalSchema,
 } from "@/lib/icp/schema";
 export {
+  formatScoringBatchMessage,
   type ScoreLeadOptions,
   type ScoreLeadsBatchOptions,
   scoreLead,

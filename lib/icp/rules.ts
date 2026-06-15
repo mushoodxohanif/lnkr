@@ -3,6 +3,7 @@ import type {
   RuleDimensionScores,
   RuleScoreResult,
   ScoringContext,
+  ScoringLead,
 } from "@/lib/icp/types";
 import { DEFAULT_ICP_WEIGHTS, type ICPWeights } from "@/lib/settings/types";
 
@@ -287,12 +288,27 @@ function scoreSignalsDimension(context: ScoringContext): {
   return { score: Math.min(100, score), reasons };
 }
 
+type RawProfileSnapshot = {
+  about?: string;
+  description?: string;
+};
+
+function getProfileAboutAndDescriptionText(lead: ScoringLead): string {
+  if (!lead.rawProfileSnapshot || typeof lead.rawProfileSnapshot !== "object") {
+    return "";
+  }
+
+  const snapshot = lead.rawProfileSnapshot as RawProfileSnapshot;
+  return [snapshot.about, snapshot.description].filter(Boolean).join(" ");
+}
+
 function applyExclusions(context: ScoringContext): {
   disqualifiers: string[];
   hardDisqualified: boolean;
 } {
   const rules = context.icp.exclusionRules;
   const disqualifiers: string[] = [];
+  const profileText = getProfileAboutAndDescriptionText(context.lead);
   const companyText = [
     context.lead.company,
     context.enrichment?.companyName,
@@ -329,6 +345,14 @@ function applyExclusions(context: ScoringContext): {
   if (rules.agencies && companyText) {
     if (containsAny(companyText, AGENCY_KEYWORDS)) {
       disqualifiers.push("Company appears to be an agency/consultancy.");
+    }
+  }
+
+  for (const keyword of rules.profileKeywords ?? []) {
+    if (profileText && containsAny(profileText, [keyword])) {
+      disqualifiers.push(
+        `Profile About/Description matches exclusion keyword: ${keyword}.`,
+      );
     }
   }
 

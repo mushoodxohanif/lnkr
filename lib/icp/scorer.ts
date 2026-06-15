@@ -1,9 +1,11 @@
 import type { TimingSignal } from "@/app/generated/prisma/client";
+import { logScoringActivity } from "@/lib/icp/activity";
 import {
   isScoringConfigured,
   LLM_SCORE_WEIGHT,
   RULE_SCORE_WEIGHT,
 } from "@/lib/icp/config";
+import { getErrorMessage, isLlmFallbackError } from "@/lib/icp/llm-errors";
 import { evaluateLeadWithLLM } from "@/lib/icp/llm-evaluator";
 import { scoreLeadWithRules } from "@/lib/icp/rules";
 import type { LeadScoreLLMOutput } from "@/lib/icp/schema";
@@ -58,9 +60,24 @@ export async function scoreLeadHybrid(
 ): Promise<HybridScoreResult> {
   const ruleResult = scoreLeadWithRules(context);
   let llmResult: LeadScoreLLMOutput | null = null;
+  let ruleOnlyFallback = false;
 
   if (!options.skipLlm && isScoringConfigured()) {
-    llmResult = await evaluateLeadWithLLM(context);
+    try {
+      llmResult = await evaluateLeadWithLLM(context);
+    } catch (error) {
+      if (!isLlmFallbackError(error)) {
+        throw error;
+      }
+
+      ruleOnlyFallback = true;
+      await logScoringActivity(
+        "score_lead_llm_fallback",
+        "Lead",
+        context.lead.id,
+        { message: getErrorMessage(error) },
+      );
+    }
   }
 
   const llmFitPercent = llmResult?.fit_percent ?? null;
@@ -104,5 +121,6 @@ export async function scoreLeadHybrid(
     ruleFitPercent: ruleResult.fitPercent,
     llmFitPercent,
     hardDisqualified: ruleResult.hardDisqualified,
+    ruleOnlyFallback: ruleOnlyFallback || undefined,
   };
 }

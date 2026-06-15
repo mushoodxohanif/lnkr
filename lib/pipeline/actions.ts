@@ -8,7 +8,11 @@ import {
   formatEnrichmentBatchMessage,
   isEnrichmentBlockingMessage,
 } from "@/lib/enrichment/blocking";
-import { isScoringConfigured, scoreLeadsBatch } from "@/lib/icp";
+import {
+  formatScoringBatchMessage,
+  isScoringConfigured,
+  scoreLeadsBatch,
+} from "@/lib/icp";
 import { getPipelineReadiness } from "@/lib/pipeline/readiness";
 import {
   canRunPlaywrightSync,
@@ -169,9 +173,11 @@ export async function scorePendingLeads(): Promise<PipelineActionState> {
 
     revalidatePipelinePaths();
 
+    const madeProgress = result.scored > 0 || result.archived > 0;
+
     return {
-      success: result.errors === 0,
-      message: `Scoring finished · ${result.scored} scored · ${result.archived} archived · ${result.skipped} skipped · ${result.errors} errors`,
+      success: result.errors === 0 || madeProgress,
+      message: formatScoringBatchMessage(result),
     };
   } catch (error) {
     return emptyState(

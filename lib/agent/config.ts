@@ -3,7 +3,7 @@ import type { TimingSignal } from "@/app/generated/prisma/client";
 export const CONNECTION_NOTE_MAX_CHARS = 300;
 export const CONTENT_BATCH_CONCURRENCY = 5;
 
-export const DAILY_BATCH_SIZE = 15;
+export const DAILY_BATCH_SIZE = 10;
 export const LEAD_LOOKBACK_DAYS = 7;
 export const MAX_LEADS_PER_COMPANY = 2;
 

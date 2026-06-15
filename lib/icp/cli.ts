@@ -1,7 +1,8 @@
 import "dotenv/config";
 
 import { DAILY_BATCH_SIZE } from "@/lib/agent/config";
-import { isScoringConfigured, scoreLead, scoreLeadsBatch } from "@/lib/icp";
+import { isScoringConfigured, scoreLeadsBatch } from "@/lib/icp";
+import { formatScoringBatchMessage, scoreLead } from "@/lib/icp/score-lead";
 
 function printUsage(): void {
   console.log(`Usage:
@@ -62,9 +63,7 @@ async function main(): Promise<void> {
     onlyUnscored: !forceRescore,
   });
 
-  console.log(
-    `Processed ${result.processed}: ${result.scored} scored, ${result.archived} archived, ${result.skipped} skipped, ${result.errors} errors.`,
-  );
+  console.log(formatScoringBatchMessage(result));
 }
 
 main().catch((error) => {
