@@ -38,7 +38,7 @@ export default async function TodayPage() {
   return (
     <DashboardShell>
       {!batch || batch.leads.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="w-full border border-dashed bg-card/50 ring-0 shadow-none">
           <CardHeader className="text-center">
             <CardTitle>No daily batch yet</CardTitle>
             <CardDescription className="mx-auto max-w-md">
@@ -53,20 +53,13 @@ export default async function TodayPage() {
               .
             </CardDescription>
           </CardHeader>
-          <CardContent className="mx-auto max-w-xl">
+          <CardContent>
             <PipelineActions config={pipelineConfig} />
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-6">
-          <Card>
-            <CardContent>
-              <PipelineActions
-                config={pipelineConfig}
-                variant="complete-only"
-              />
-            </CardContent>
-          </Card>
+          <PipelineActions config={pipelineConfig} variant="complete-only" />
           {batch.leads.map((lead) => (
             <LeadCard key={lead.id} lead={lead} />
           ))}

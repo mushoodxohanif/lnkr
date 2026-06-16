@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   buildPipelineProgress,
@@ -15,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 type PipelineProgressPanelProps = {
   config: PipelineConfig;
+  className?: string;
   compact?: boolean;
   /** Poll for updates while a pipeline action is running */
   polling?: boolean;
@@ -41,7 +41,7 @@ function StepRow({
   return (
     <div
       className={cn(
-        "rounded-lg border px-3 py-2.5",
+        "min-w-0 rounded-lg border px-3 py-2.5",
         STATUS_STYLES[step.status],
       )}
     >
@@ -79,6 +79,7 @@ function StepRow({
 
 export function PipelineProgressPanel({
   config,
+  className,
   compact = false,
   polling = false,
 }: PipelineProgressPanelProps) {
@@ -96,25 +97,28 @@ export function PipelineProgressPanel({
   }, [polling, router]);
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Pipeline progress
-            </p>
-            <CardTitle className="mt-1 text-sm">{progress.headline}</CardTitle>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-semibold tabular-nums text-foreground">
-              {progress.overallPercent}%
-            </p>
-            <p className="text-xs text-muted-foreground">overall</p>
-          </div>
+    <section
+      className={cn(
+        "w-full rounded-xl border border-border bg-card text-sm text-card-foreground shadow-sm",
+        className,
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-4">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Pipeline progress
+          </p>
+          <p className="mt-1 text-sm font-medium">{progress.headline}</p>
         </div>
-      </CardHeader>
+        <div className="text-right">
+          <p className="text-2xl font-semibold tabular-nums text-foreground">
+            {progress.overallPercent}%
+          </p>
+          <p className="text-xs text-muted-foreground">overall</p>
+        </div>
+      </div>
 
-      <CardContent className="space-y-4">
+      <div className="space-y-4 px-4 py-4">
         <Progress
           value={progress.overallPercent}
           className={cn(
@@ -127,14 +131,16 @@ export function PipelineProgressPanel({
 
         <div
           className={
-            compact ? "grid gap-2 sm:grid-cols-2 lg:grid-cols-4" : "space-y-2"
+            compact
+              ? "grid grid-cols-1 gap-2 sm:grid-cols-2"
+              : "grid grid-cols-1 gap-2"
           }
         >
           {progress.steps.map((step) => (
             <StepRow key={step.id} step={step} compact={compact} />
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

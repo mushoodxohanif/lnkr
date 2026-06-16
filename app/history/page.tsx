@@ -43,7 +43,7 @@ export default async function HistoryPage() {
   return (
     <DashboardShell>
       {batches.length === 0 ? (
-        <Card className="border-dashed shadow-sm">
+        <Card className="mx-auto w-full max-w-xl border border-dashed bg-card/50 ring-0 shadow-none">
           <CardHeader className="text-center">
             <CardTitle className="text-lg">No batches yet</CardTitle>
             <CardDescription className="mx-auto max-w-md">
@@ -51,9 +51,7 @@ export default async function HistoryPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mx-auto max-w-xl">
-              <PipelineActions config={pipelineConfig} variant="compact" />
-            </div>
+            <PipelineActions config={pipelineConfig} variant="compact" />
           </CardContent>
         </Card>
       ) : (
